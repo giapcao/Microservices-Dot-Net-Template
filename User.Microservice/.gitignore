@@ -1,0 +1,4 @@
+**/Build/
+.vscode/
+.env
+.fake

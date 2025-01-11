@@ -1,10 +1,8 @@
-version: "3.9"
-
 services:
   guest-microservice:
     build:
-      context: ./Guest.Microservice
-      dockerfile: Dockerfile
+      context: ./Microservices
+      dockerfile: ./Guest.Microservice/Dockerfile
     image: guest-microservice
     container_name: guest-microservice
     environment:
@@ -15,13 +13,17 @@ services:
       DATABASE_USERNAME:
       DATABASE_PASSWORD:
       ASPNETCORE_URLS: http://+:5001
+      RABBITMQ_HOST: rabbit-mq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME:
+      RABBITMQ_PASSWORD:
     networks:
       - app-network
 
   user-microservice:
     build:
-      context: ./User.Microservice
-      dockerfile: Dockerfile
+      context: ./Microservices
+      dockerfile: ./User.Microservice/Dockerfile
     image: user-microservice
     container_name: user-microservice
     environment:
@@ -32,6 +34,10 @@ services:
       DATABASE_USERNAME:
       DATABASE_PASSWORD:
       ASPNETCORE_URLS: http://+:5002
+      RABBITMQ_HOST: rabbit-mq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME:
+      RABBITMQ_PASSWORD:
     networks:
       - app-network
 
@@ -48,6 +54,23 @@ services:
     networks:
       - app-network
 
+  rabbit-mq:
+    image: rabbitmq:3-management
+    container_name: rabbit-mq
+    ports:
+      - "5672:5672" # RabbitMQ message broker port
+      - "15672:15672" # RabbitMQ management console
+    environment:
+      RABBITMQ_DEFAULT_USER:
+      RABBITMQ_DEFAULT_PASS:
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - app-network
+
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  rabbitmq_data:

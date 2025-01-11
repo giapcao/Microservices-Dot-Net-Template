@@ -1,0 +1,28 @@
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /App
+
+COPY Microservices.sln ./
+
+COPY Guest.Microservice/src/WebApi/WebApi.csproj ./Guest.Microservice/src/WebApi/
+COPY Guest.Microservice/src/Application/Application.csproj ./Guest.Microservice/src/Application/
+COPY Guest.Microservice/src/Infrastructure/Infrastructure.csproj ./Guest.Microservice/src/Infrastructure/
+COPY Guest.Microservice/src/Domain/Domain.csproj ./Guest.Microservice/src/Domain/
+COPY Guest.Microservice/test/test.csproj ./Guest.Microservice/test/
+COPY SharedLibrary/SharedLibrary.csproj ./SharedLibrary/
+
+RUN dotnet restore Guest.Microservice/src/WebApi/WebApi.csproj
+
+COPY Guest.Microservice/src/ ./Guest.Microservice/src/
+COPY SharedLibrary/ ./SharedLibrary/
+
+WORKDIR /App/Guest.Microservice/src/WebApi
+RUN dotnet publish -c Release -o /App/out
+
+FROM mcr.microsoft.com/dotnet/aspnet:9.0
+WORKDIR /App
+
+ENV ASPNETCORE_ENVIRONMENT=Production
+
+COPY --from=build /App/out .
+
+ENTRYPOINT ["dotnet", "WebApi.dll"]

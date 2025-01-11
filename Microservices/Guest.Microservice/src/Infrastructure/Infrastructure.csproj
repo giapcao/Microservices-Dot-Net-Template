@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="DotNetEnv" Version="3.1.1" />
+    <PackageReference Include="MassTransit.RabbitMQ" Version="8.3.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -26,13 +27,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\SharedLibrary\SharedLibrary.csproj" />
     <ProjectReference Include="..\Application\Application.csproj" />
   </ItemGroup>
 
   <Target Name="CopyEFCoreTargetsFile" BeforeTargets="BeforeBuild">
-    <Copy SourceFiles="Configs\Infrastructure.csproj.EntityFrameworkCore.targets"
-          DestinationFolder="Build\obj"
-          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="Configs\Infrastructure.csproj.EntityFrameworkCore.targets" DestinationFolder="Build\obj" SkipUnchangedFiles="true" />
   </Target>
 
 </Project>

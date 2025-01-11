@@ -8,6 +8,8 @@ using Infrastructure.Repositories;
 using Application.Abstractions.UnitOfWork;
 using Domain.Common;
 using Infrastructure.Common;
+using MassTransit;
+using Application.Consumers;
 
 namespace Infrastructure
 {
@@ -16,9 +18,10 @@ namespace Infrastructure
         public static IServiceCollection AddInfrastructure(this IServiceCollection services)
         {
 
-            services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IGuestRepository, GuestRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+            
 
             string solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory())?.FullName ?? "";
             if (solutionDirectory != null)
@@ -30,18 +33,33 @@ namespace Infrastructure
             var logger = serviceProvider.GetRequiredService<ILogger<AutoScaffold>>();
             var config = serviceProvider.GetRequiredService<EnvironmentConfig>();
             var scaffold = new AutoScaffold(logger)
-                    .Configure(
-                        config.DatabaseHost,
-                        config.DatabasePort,
-                        config.DatabaseName,
-                        config.DatabaseUser,
-                        config.DatabasePassword,
-                        config.DatabaseProvider);
+                .Configure(
+                    config.DatabaseHost,
+                    config.DatabasePort,
+                    config.DatabaseName,
+                    config.DatabaseUser,
+                    config.DatabasePassword,
+                    config.DatabaseProvider);
 
             scaffold.UpdateAppSettings();
+
+            services.AddMassTransit(busConfigurator => {
+                busConfigurator.SetKebabCaseEndpointNameFormatter();
+                busConfigurator.AddConsumer<UserCreatedConsumer>();
+                busConfigurator.UsingRabbitMq((context, configurator) =>{
+                    configurator.Host(new Uri($"rabbitmq://{config.RabbitMqHost}:{config.RabbitMqPort}/"), h=>{
+                        h.Username(config.RabbitMqUser);
+                        h.Password(config.RabbitMqPassword);
+                    });
+                    configurator.ConfigureEndpoints(context);
+                });
+                
+            });
+
             var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
             if (environment == "Development")
             {
+
                 var autoMigration = new AutoMigration(logger);
 
                 string currentHash = SchemaComparer.GenerateDatabaseSchemaHash(

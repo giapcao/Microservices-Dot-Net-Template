@@ -5,6 +5,9 @@ using Application.Common.ResponseModel;
 using AutoMapper;
 using Domain.Entities;
 using Domain.Repositories;
+using MassTransit;
+using MediatR;
+using SharedLibrary.Contracts;
 
 namespace Application.Users.Commands
 {
@@ -18,16 +21,23 @@ namespace Application.Users.Commands
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
-        public CreateUserCommandHandler(IUserRepository userRepository, IMapper mapper, IUnitOfWork unitOfWork)
+        private readonly IPublishEndpoint _publishEndpoint;
+
+        public CreateUserCommandHandler(IUserRepository userRepository, IMapper mapper, IUnitOfWork unitOfWork, IPublishEndpoint publishEndpoint)
         {
             _userRepository = userRepository;
             _mapper = mapper;
             _unitOfWork = unitOfWork;
+            _publishEndpoint = publishEndpoint;
         }
         public async Task<Result> Handle(CreateUserCommand command, CancellationToken cancellationToken)
         {
             await _userRepository.AddAsync(_mapper.Map<User>(command), cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _publishEndpoint.Publish(new UserCreatedEvent{
+                Name = command.Name,
+                Email = command.Email
+            }, cancellationToken);
             return Result.Success();
         }
     }

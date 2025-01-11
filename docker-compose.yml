@@ -1,34 +1,53 @@
-version: '3.9'
+version: "3.9"
 
 services:
   guest-microservice:
     build:
-      context: ./Guest.Microservice 
+      context: ./Guest.Microservice
       dockerfile: Dockerfile
     image: guest-microservice
     container_name: guest-microservice
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      DATABASE_HOST: 
-      DATABASE_PORT: 
-      DATABASE_NAME: 
-      DATABASE_USERNAME: 
-      DATABASE_PASSWORD: 
-    ports:
-      - "5195:8080"
+      DATABASE_HOST:
+      DATABASE_PORT:
+      DATABASE_NAME:
+      DATABASE_USERNAME:
+      DATABASE_PASSWORD:
+      ASPNETCORE_URLS: http://+:5001
+    networks:
+      - app-network
 
   user-microservice:
     build:
-      context: ./User.Microservice  
+      context: ./User.Microservice
       dockerfile: Dockerfile
     image: user-microservice
     container_name: user-microservice
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      DATABASE_HOST: 
-      DATABASE_PORT: 
-      DATABASE_NAME: 
-      DATABASE_USERNAME: 
-      DATABASE_PASSWORD: 
+      DATABASE_HOST:
+      DATABASE_PORT:
+      DATABASE_NAME:
+      DATABASE_USERNAME:
+      DATABASE_PASSWORD:
+      ASPNETCORE_URLS: http://+:5002
+    networks:
+      - app-network
+
+  api-gateway:
+    build:
+      context: ./ApiGateway
+      dockerfile: Dockerfile
+    image: api-gateway
+    container_name: api-gateway
     ports:
-      - "5194:8080"
+      - "5000:8080"
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

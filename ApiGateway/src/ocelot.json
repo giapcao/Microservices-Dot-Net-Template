@@ -6,8 +6,8 @@
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "localhost",
-          "Port": 5194
+          "Host": "user-microservice",
+          "Port": 5002
         }
       ],
       "DownstreamPathTemplate": "/api/User/{everything}"
@@ -19,14 +19,14 @@
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "localhost",
-          "Port": 5195
+          "Host": "guest-microservice",
+          "Port": 5001
         }
       ],
       "DownstreamPathTemplate": "/api/Guest/{everything}"
     }
   ],
   "GlobalConfiguration": {
-    "BaseUrl": "http://localhost:5019"
+    "BaseUrl": "http://localhost:8080"
   }
 }

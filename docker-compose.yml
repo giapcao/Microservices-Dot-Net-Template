@@ -1,0 +1,34 @@
+version: '3.9'
+
+services:
+  guest-microservice:
+    build:
+      context: ./Guest.Microservice 
+      dockerfile: Dockerfile
+    image: guest-microservice
+    container_name: guest-microservice
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      DATABASE_HOST: 
+      DATABASE_PORT: 
+      DATABASE_NAME: 
+      DATABASE_USERNAME: 
+      DATABASE_PASSWORD: 
+    ports:
+      - "5195:8080"
+
+  user-microservice:
+    build:
+      context: ./User.Microservice  
+      dockerfile: Dockerfile
+    image: user-microservice
+    container_name: user-microservice
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      DATABASE_HOST: 
+      DATABASE_PORT: 
+      DATABASE_NAME: 
+      DATABASE_USERNAME: 
+      DATABASE_PASSWORD: 
+    ports:
+      - "5194:8080"

@@ -2,4 +2,4 @@
 .vscode/
 .env
 .fake
-.yml
+docker-compose-production.yml

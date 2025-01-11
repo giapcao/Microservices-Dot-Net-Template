@@ -26,13 +26,10 @@ namespace Infrastructure
                 DotNetEnv.Env.Load(Path.Combine(solutionDirectory, ".env"));
             }
             services.AddSingleton<EnvironmentConfig>();
-            var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-            if (environment == "Development")
-            {
-                using var serviceProvider = services.BuildServiceProvider();
-                var logger = serviceProvider.GetRequiredService<ILogger<AutoScaffold>>();
-                var config = serviceProvider.GetRequiredService<EnvironmentConfig>();
-                var scaffold = new AutoScaffold(logger)
+            using var serviceProvider = services.BuildServiceProvider();
+            var logger = serviceProvider.GetRequiredService<ILogger<AutoScaffold>>();
+            var config = serviceProvider.GetRequiredService<EnvironmentConfig>();
+            var scaffold = new AutoScaffold(logger)
                     .Configure(
                         config.DatabaseHost,
                         config.DatabasePort,
@@ -41,8 +38,10 @@ namespace Infrastructure
                         config.DatabasePassword,
                         config.DatabaseProvider);
 
-                scaffold.UpdateAppSettings();
-
+            scaffold.UpdateAppSettings();
+            var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            if (environment == "Development")
+            {
                 var autoMigration = new AutoMigration(logger);
 
                 string currentHash = SchemaComparer.GenerateDatabaseSchemaHash(

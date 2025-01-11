@@ -2,7 +2,7 @@
   "Routes": [
     {
       "UpstreamPathTemplate": "/api/User/{everything}",
-      "UpstreamHttpMethod": ["Get", "Post", "Put"],
+      "UpstreamHttpMethod": ["Get", "Post", "Put", "Delete"],
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
@@ -15,7 +15,7 @@
 
     {
       "UpstreamPathTemplate": "/api/Guest/{everything}",
-      "UpstreamHttpMethod": ["Get", "Post", "Put"],
+      "UpstreamHttpMethod": ["Get", "Post", "Put", "Delete"],
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {

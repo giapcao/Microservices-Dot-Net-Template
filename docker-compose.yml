@@ -3,6 +3,8 @@ services:
     build:
       context: ./Microservices
       dockerfile: ./Guest.Microservice/Dockerfile
+      args:
+        SERVICE_NAME: Guest.Microservice
     image: guest-microservice
     container_name: guest-microservice
     environment:
@@ -45,6 +47,8 @@ services:
     build:
       context: ./ApiGateway
       dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: User.Microservice
     image: api-gateway
     container_name: api-gateway
     ports:

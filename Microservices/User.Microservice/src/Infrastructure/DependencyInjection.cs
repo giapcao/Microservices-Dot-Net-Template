@@ -51,6 +51,7 @@ namespace Infrastructure
                     {
                         r.DatabaseConfiguration("redis:6379");
                         r.KeyPrefix = "user-creating-saga";
+                        r.Expiry = TimeSpan.FromMinutes(10);
                     });
                 busConfigurator.UsingRabbitMq((context, configurator) =>
                 {

@@ -14,7 +14,7 @@ namespace Application.Sagas
         public State Failed { get; set; }
 
 
-        public Event<UserCreatingSagaStart> userCreatd { get; set; }
+        public Event<UserCreatingSagaStart> userCreated { get; set; }
         public Event<GuestCreatedEvent> GuestCreated { get; set; }
         public Event<GuestCreatedFailureEvent> GuestCreatedFailed { get; set; }
 
@@ -22,10 +22,12 @@ namespace Application.Sagas
         {
             InstanceState(x => x.CurrentState);
 
-            Event(() => userCreatd, e => e.CorrelateById(m => m.Message.CorrelationId));
+            Event(() => userCreated, e => e.CorrelateById(m => m.Message.CorrelationId));
+            Event(() => GuestCreated, e => e.CorrelateById(m => m.Message.CorrelationId));
+            Event(() => GuestCreatedFailed, e => e.CorrelateById(m => m.Message.CorrelationId));
 
             Initially(
-                When(userCreatd)
+                When(userCreated)
                 .TransitionTo(GuestCreating)
                 .ThenAsync(async context =>
                 {

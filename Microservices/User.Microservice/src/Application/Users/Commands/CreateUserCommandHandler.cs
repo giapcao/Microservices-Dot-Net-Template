@@ -35,7 +35,7 @@ namespace Application.Users.Commands
             await _userRepository.AddAsync(_mapper.Map<User>(command), cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await _publishEndpoint.Publish(new UserCreatingSagaStart{
-                CorrelationId= new Guid(),
+                CorrelationId= Guid.NewGuid(),
                 Name = command.Name,
                 Email = command.Email
             }, cancellationToken);

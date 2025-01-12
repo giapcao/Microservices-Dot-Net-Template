@@ -99,6 +99,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    command: >
+      redis-server --maxmemory 12gb --maxmemory-policy allkeys-lru
 
 networks:
   app-network:

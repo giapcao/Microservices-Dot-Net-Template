@@ -44,10 +44,14 @@ namespace Infrastructure
             scaffold.UpdateAppSettings();
             services.AddMassTransit(busConfigurator =>
             {
-                
+
                 busConfigurator.SetKebabCaseEndpointNameFormatter();
                 busConfigurator.AddSagaStateMachine<UserCreatingSaga, UserCreatingSagaData>()
-                    .InMemoryRepository();
+                    .RedisRepository(r =>
+                    {
+                        r.DatabaseConfiguration("redis:6379");
+                        r.KeyPrefix = "user-creating-saga";
+                    });
                 busConfigurator.UsingRabbitMq((context, configurator) =>
                 {
                     configurator.Host(new Uri($"rabbitmq://{config.RabbitMqHost}:{config.RabbitMqPort}/"), h =>

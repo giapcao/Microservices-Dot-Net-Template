@@ -9,6 +9,8 @@ using Application.Abstractions.UnitOfWork;
 using Domain.Common;
 using Infrastructure.Common;
 using MassTransit;
+using Application.Sagas;
+using Infrastructure.Context;
 
 namespace Infrastructure
 {
@@ -42,7 +44,10 @@ namespace Infrastructure
             scaffold.UpdateAppSettings();
             services.AddMassTransit(busConfigurator =>
             {
+                
                 busConfigurator.SetKebabCaseEndpointNameFormatter();
+                busConfigurator.AddSagaStateMachine<UserCreatingSaga, UserCreatingSagaData>()
+                    .InMemoryRepository();
                 busConfigurator.UsingRabbitMq((context, configurator) =>
                 {
                     configurator.Host(new Uri($"rabbitmq://{config.RabbitMqHost}:{config.RabbitMqPort}/"), h =>

@@ -8,7 +8,7 @@ using AutoMapper;
 using Domain.Entities;
 using Domain.Repositories;
 using MassTransit;
-using SharedLibrary.Contracts;
+using SharedLibrary.Contracts.UserCreating;
 
 namespace Application.Consumers
 {
@@ -26,9 +26,22 @@ namespace Application.Consumers
         }
         public async Task Consume(ConsumeContext<UserCreatedEvent> context)
         {
-            var command = new CreateGuestCommand(context.Message.Name, context.Message.Email);
-            await _guestRepository.AddAsync(_mapper.Map<Guest>(command), context.CancellationToken);
-            await _unitOfWork.SaveChangesAsync(context.CancellationToken);
+            try
+            {
+                var command = new CreateGuestCommand(context.Message.Name, context.Message.Email);
+                await _guestRepository.AddAsync(_mapper.Map<Guest>(command), context.CancellationToken);
+                await _unitOfWork.SaveChangesAsync(context.CancellationToken);
+                await context.Publish(new GuestCreatedEvent
+                {
+                    CorrelationId = context.Message.CorrelationId
+                });
+            }catch(Exception ex){
+                await context.Publish(new GuestCreatedFailureEvent
+                {
+                    CorrelationId = context.Message.CorrelationId,
+                    Reason = ex.Message
+                });
+            }
         }
     }
 }

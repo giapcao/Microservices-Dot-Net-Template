@@ -7,7 +7,7 @@ using Domain.Entities;
 using Domain.Repositories;
 using MassTransit;
 using MediatR;
-using SharedLibrary.Contracts;
+using SharedLibrary.Contracts.UserCreating;
 
 namespace Application.Users.Commands
 {
@@ -34,7 +34,8 @@ namespace Application.Users.Commands
         {
             await _userRepository.AddAsync(_mapper.Map<User>(command), cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            await _publishEndpoint.Publish(new UserCreatedEvent{
+            await _publishEndpoint.Publish(new UserCreatingSagaStart{
+                CorrelationId= new Guid(),
                 Name = command.Name,
                 Email = command.Email
             }, cancellationToken);

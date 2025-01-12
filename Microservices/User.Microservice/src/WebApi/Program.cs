@@ -28,7 +28,8 @@ builder.Services.ConfigureOptions<DatabaseConfigSetup>();
 builder.Services.AddDbContext<MyDbContext>((serviceProvider, options) =>
 {
     var databaseConfig = serviceProvider.GetService<IOptions<DatabaseConfig>>()!.Value;
-    options.UseNpgsql(databaseConfig.ConnectionString, actions=>{
+    options.UseNpgsql(databaseConfig.ConnectionString, actions =>
+    {
         actions.EnableRetryOnFailure(databaseConfig.MaxRetryCount);
         actions.CommandTimeout(databaseConfig.CommandTimeout);
     });

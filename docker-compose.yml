@@ -72,6 +72,10 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
+      USER_MICROSERVICE_HOST: YOUR_MICROSERVICE_HOST #example: user-microservice (the docker service name)
+      USER_MICROSERVICE_PORT: YOUR_MICROSERVICE_PORT
+      GUEST_MICROSERVICE_HOST: YOUR_MICROSERVICE_HOST
+      GUEST_MICROSERVICE_PORT: YOUR_MICROSERVICE_PORT
     networks:
       - app-network
 

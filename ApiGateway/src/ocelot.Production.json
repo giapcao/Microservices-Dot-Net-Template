@@ -6,8 +6,8 @@
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "user-microservice",
-          "Port": 5002
+          "Host": "{USER_MICROSERVICE_HOST}",
+          "Port": "{USER_MICROSERVICE_PORT}"
         }
       ],
       "DownstreamPathTemplate": "/api/User/{everything}"
@@ -19,8 +19,8 @@
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "guest-microservice",
-          "Port": 5001
+          "Host": "{GUEST_MICROSERVICE_HOST}",
+          "Port": "{GUEST_MICROSERVICE_PORT}"
         }
       ],
       "DownstreamPathTemplate": "/api/Guest/{everything}"

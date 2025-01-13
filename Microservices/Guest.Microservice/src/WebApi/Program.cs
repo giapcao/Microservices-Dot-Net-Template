@@ -8,6 +8,12 @@ using Microsoft.Extensions.Options;
 using Serilog;
 using WebApi.Configs;
 
+string solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory())?.FullName ?? "";
+if (solutionDirectory != null)
+{
+    DotNetEnv.Env.Load(Path.Combine(solutionDirectory, ".env"));
+}
+
 var builder = WebApplication.CreateBuilder(args);
 var environment = builder.Environment;
 
@@ -28,7 +34,8 @@ builder.Services.ConfigureOptions<DatabaseConfigSetup>();
 builder.Services.AddDbContext<MyDbContext>((serviceProvider, options) =>
 {
     var databaseConfig = serviceProvider.GetService<IOptions<DatabaseConfig>>()!.Value;
-    options.UseNpgsql(databaseConfig.ConnectionString, actions=>{
+    options.UseNpgsql(databaseConfig.ConnectionString, actions =>
+    {
         actions.EnableRetryOnFailure(databaseConfig.MaxRetryCount);
         actions.CommandTimeout(databaseConfig.CommandTimeout);
     });

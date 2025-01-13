@@ -12,13 +12,16 @@ services:
       DATABASE_HOST: 
       DATABASE_PORT: 
       DATABASE_NAME: 
-      DATABASE_USERNAME: 
-      DATABASE_PASSWORD: 
+      DATABASE_USERNAME: YOUR_USERNAME
+      DATABASE_PASSWORD: YOUR_PASSWORD
       ASPNETCORE_URLS: http://+:5001
       RABBITMQ_HOST: rabbit-mq
       RABBITMQ_PORT: 5672
-      RABBITMQ_USERNAME: 
-      RABBITMQ_PASSWORD: 
+      RABBITMQ_USERNAME: YOUR_USERNAME
+      RABBITMQ_PASSWORD: YOUR_PASSWORD
+      REDIS_HOST: redis
+      REDIS_PASSWORD: YOUR_PASSWORD
+      REDIS_PORT: 6379
     depends_on:
       rabbit-mq:
         condition: service_healthy
@@ -38,15 +41,18 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       DATABASE_HOST: 
-      DATABASE_PORT: 
+      DATABASE_PORT:
       DATABASE_NAME: 
-      DATABASE_USERNAME: 
-      DATABASE_PASSWORD: 
+      DATABASE_USERNAME: YOUR_USERNAME
+      DATABASE_PASSWORD: YOUR_PASSWORD
       ASPNETCORE_URLS: http://+:5002
       RABBITMQ_HOST: rabbit-mq
       RABBITMQ_PORT: 5672
-      RABBITMQ_USERNAME: 
-      RABBITMQ_PASSWORD: 
+      RABBITMQ_USERNAME: YOUR_USERNAME
+      RABBITMQ_PASSWORD: YOUR_PASSWORD
+      REDIS_HOST: redis
+      REDIS_PASSWORD: YOUR_PASSWORD
+      REDIS_PORT: 6379
     depends_on:
       rabbit-mq:
         condition: service_healthy
@@ -64,6 +70,7 @@ services:
     ports:
       - "2406:8080"
     environment:
+      ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
     networks:
       - app-network
@@ -72,13 +79,13 @@ services:
     image: rabbitmq:3-management
     container_name: rabbit-mq
     ports:
-      - "5672:5672" # RabbitMQ message broker port
-      - "15672:15672" # RabbitMQ management console
+      - "5672:5672"
+      - "15672:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: 
-      RABBITMQ_DEFAULT_PASS: 
+      RABBITMQ_DEFAULT_USER: YOUR_USERNAME
+      RABBITMQ_DEFAULT_PASS: YOUR_PASSWORD
     volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq-data:/var/lib/rabbitmq
     networks:
       - app-network
     healthcheck:
@@ -90,17 +97,18 @@ services:
   redis:
     image: redis:alpine
     container_name: redis
+    command: ["redis-server", "--requirepass", "YOUR_PASSWORD"]
+    volumes:
+      - redis-data:/data
     ports:
       - "6379:6379"
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli","-a", "YOUR_PASSWORD", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-    command: >
-      redis-server --maxmemory 12gb --maxmemory-policy allkeys-lru
 
 networks:
   app-network:
@@ -108,3 +116,4 @@ networks:
 
 volumes:
   rabbitmq_data:
+  redis-data:

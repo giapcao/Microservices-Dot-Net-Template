@@ -7,6 +7,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Serilog;
 using WebApi.Configs;
+string solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory())?.FullName ?? "";
+if (solutionDirectory != null)
+{
+    DotNetEnv.Env.Load(Path.Combine(solutionDirectory, ".env"));
+}
 
 var builder = WebApplication.CreateBuilder(args);
 var environment = builder.Environment;

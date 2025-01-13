@@ -21,14 +21,8 @@ namespace Infrastructure
             services.AddScoped<IGuestRepository, GuestRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
-            
-
-            string solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory())?.FullName ?? "";
-            if (solutionDirectory != null)
-            {
-                DotNetEnv.Env.Load(Path.Combine(solutionDirectory, ".env"));
-            }
             services.AddSingleton<EnvironmentConfig>();
+            var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
             using var serviceProvider = services.BuildServiceProvider();
             var logger = serviceProvider.GetRequiredService<ILogger<AutoScaffold>>();
             var config = serviceProvider.GetRequiredService<EnvironmentConfig>();
@@ -42,7 +36,11 @@ namespace Infrastructure
                     config.DatabaseProvider);
 
             scaffold.UpdateAppSettings();
-
+            string solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory())?.FullName ?? "";
+            if (solutionDirectory != null)
+            {
+                DotNetEnv.Env.Load(Path.Combine(solutionDirectory, ".env"));
+            }
             services.AddMassTransit(busConfigurator => {
                 busConfigurator.SetKebabCaseEndpointNameFormatter();
                 busConfigurator.AddConsumer<UserCreatedConsumer>();
@@ -56,7 +54,6 @@ namespace Infrastructure
                 
             });
 
-            var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
             if (environment == "Development")
             {
 

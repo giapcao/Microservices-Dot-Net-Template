@@ -18,5 +18,8 @@ namespace Infrastructure.Configs
         public string RabbitMqUser => Environment.GetEnvironmentVariable("RABBITMQ_USERNAME") ?? "username";
         public string RabbitMqPassword => Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? "password";
 
+        public string RedisHost => Environment.GetEnvironmentVariable("REDIS_HOST") ?? "redis";
+        public string RedisPassword => Environment.GetEnvironmentVariable("REDIS_PASSWORD") ?? "default";
+        public int RedisPort => int.TryParse(Environment.GetEnvironmentVariable("REDIS_PORT"), out var port) ? port : 6379;
     }
 }

@@ -1,5 +1,5 @@
 **/Build
-**/.vscode/
+**/.vscode
 **/.env
 **/.fake
 **/bin

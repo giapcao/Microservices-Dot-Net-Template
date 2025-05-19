@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Npgsql;
 
-namespace Infrastructure.Utils
+namespace SharedLibrary.Utils
 {
     public class SchemaComparer
     {
@@ -132,4 +132,4 @@ namespace Infrastructure.Utils
             File.WriteAllBytes(filePath, hashBytes);
         }
     }
-}
+} 

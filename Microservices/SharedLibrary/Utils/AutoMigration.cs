@@ -4,7 +4,7 @@ using System.IO;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
-namespace Infrastructure.Utils
+namespace SharedLibrary.Utils
 {
     public class AutoMigration
     {
@@ -110,4 +110,4 @@ namespace Infrastructure.Utils
             ExecuteMigrationCommand("update", targetMigration);
         }
     }
-}
+} 

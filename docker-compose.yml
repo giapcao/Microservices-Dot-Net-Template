@@ -119,5 +119,5 @@ networks:
     driver: bridge
 
 volumes:
-  rabbitmq_data:
+  rabbitmq-data:
   redis-data:

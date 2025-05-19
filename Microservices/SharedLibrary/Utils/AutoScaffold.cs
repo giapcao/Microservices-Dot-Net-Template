@@ -4,7 +4,7 @@ using System.IO;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
-namespace Infrastructure.Utils
+namespace SharedLibrary.Utils
 {
     public class AutoScaffold
     {
@@ -145,4 +145,4 @@ namespace Infrastructure.Utils
             }
         }
     }
-}
+} 

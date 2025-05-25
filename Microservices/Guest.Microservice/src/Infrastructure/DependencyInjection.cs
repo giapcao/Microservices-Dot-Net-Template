@@ -45,10 +45,17 @@ namespace Infrastructure
                 busConfigurator.SetKebabCaseEndpointNameFormatter();
                 busConfigurator.AddConsumer<UserCreatedConsumer>();
                 busConfigurator.UsingRabbitMq((context, configurator) =>{
-                    configurator.Host(new Uri($"rabbitmq://{config.RabbitMqHost}:{config.RabbitMqPort}/"), h=>{
-                        h.Username(config.RabbitMqUser);
-                        h.Password(config.RabbitMqPassword);
-                    });
+                    if (config.IsRabbitMqCloud)
+                    {
+                        configurator.Host(config.RabbitMqUrl);
+                    }
+                    else
+                    {
+                        configurator.Host(new Uri($"rabbitmq://{config.RabbitMqHost}:{config.RabbitMqPort}/"), h=>{
+                            h.Username(config.RabbitMqUser);
+                            h.Password(config.RabbitMqPassword);
+                        });
+                    }
                     configurator.ConfigureEndpoints(context);
                 });
                 

@@ -1,76 +1,43 @@
-##########################################################################
-# REQUIRED VARIABLES (declare in ecs/variables.tf or from the root module)
-##########################################################################
-# var.project_name             – Prefix for names/tags
-# var.aws_region               – e.g. "ap-southeast-1"
-# var.container_name           – logical name inside the task def
-# var.ecr_repository_url       – 111122223333.dkr.ecr.ap-southeast-1.amazonaws.com/myapp
-# var.image_tag                – e.g. "latest"
-# var.container_cpu            – 256  (hard limit, unit = CPU shares)
-# var.container_memory         – 512  (hard limit, MiB)
-# var.container_port           – 8080
-# var.environment_variables    – list of { name = "...", value = "..." }
-# var.health_check_command     – ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
-# var.ecs_cluster_id           – aws_ecs_cluster.main.id  (passed from ec2 module)
-# var.ecs_cluster_name         – aws_ecs_cluster.main.name
-# var.vpc_id                   – VPC where service discovery lives
-# --- OPTIONAL ---
-# var.enable_service_discovery – default false
-# var.enable_auto_scaling      – default false
-# var.desired_count            – default 1
-# var.target_group_arn         – ""  (if ALB target group supplied)
-# var.log_retention_days       – default 30
-# var.max_capacity             – default 4
-# var.min_capacity             – default 1
-# var.cpu_target_value         – default 50
-# var.memory_target_value      – default 70
-##########################################################################
-
-#################################
-# CloudWatch log group (one-off)
-#################################
 resource "aws_cloudwatch_log_group" "ecs_logs" {
   name              = "/ecs/${var.project_name}"
   retention_in_days = var.log_retention_days
   tags              = { Name = "${var.project_name}-ecs-logs" }
 }
 
-####################
-# IAM FOR THE TASK
-####################
 resource "aws_iam_role" "ecs_task_role" {
   name = "${var.project_name}-ecs-task-role"
 
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+    Version   = "2012-10-17"
     Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
       Principal = { Service = "ecs-tasks.amazonaws.com" }
     }]
   })
+  tags = { Name = "${var.project_name}-ecs-task-role" }
 }
 
 resource "aws_iam_role" "ecs_execution_role" {
   name = "${var.project_name}-ecs-execution-role"
 
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+    Version   = "2012-10-17"
     Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
       Principal = { Service = "ecs-tasks.amazonaws.com" }
     }]
   })
+  tags = { Name = "${var.project_name}-ecs-execution-role" }
 }
 
-# Policy: the task itself only needs to write its own log streams
 resource "aws_iam_role_policy" "ecs_task_policy" {
   name = "${var.project_name}-ecs-task-policy"
   role = aws_iam_role.ecs_task_role.id
 
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version   = "2012-10-17"
     Statement = [{
       Effect   = "Allow"
       Action   = ["logs:CreateLogStream", "logs:PutLogEvents"]
@@ -79,71 +46,74 @@ resource "aws_iam_role_policy" "ecs_task_policy" {
   })
 }
 
-# Pre-defined AWS-managed policies
 resource "aws_iam_role_policy_attachment" "ecs_execution_managed" {
   role       = aws_iam_role.ecs_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_ecr_pull" {
-  role       = aws_iam_role.ecs_task_role.name
+  role       = aws_iam_role.ecs_task_role.name # Task role needs ECR pull if not using execution role for it (best practice is execution role)
+  # For tasks to pull from ECR, AmazonECSTaskExecutionRolePolicy on ecs_execution_role is sufficient.
+  # If containers need to interact with other AWS services (e.g. S3, DynamoDB), add permissions to ecs_task_role.
+  # Adding AmazonEC2ContainerRegistryReadOnly to task role is redundant if execution role has it, but harmless.
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
-##############################
-# TASK DEFINITION
-##############################
 resource "aws_ecs_task_definition" "app_task" {
   family                   = "${var.project_name}-task"
-  network_mode             = "bridge"
+  network_mode             = "bridge" # Bridge mode for EC2 launch type with multiple containers on same host
   requires_compatibilities = ["EC2"]
-  cpu                      = tostring(var.container_cpu)
-  memory                   = tostring(var.container_memory)
+  cpu                      = tostring(var.task_cpu)
+  memory                   = tostring(var.task_memory)
 
   task_role_arn      = aws_iam_role.ecs_task_role.arn
   execution_role_arn = aws_iam_role.ecs_execution_role.arn
 
   container_definitions = jsonencode([
-    {
-      name      = var.container_name
-      image     = "${var.ecr_repository_url}:${var.image_tag}"
-      cpu       = var.container_cpu
-      memory    = var.container_memory
-      essential = true
+    for c in var.containers : {
+      name      = c.name
+      image     = "${c.image_repository_url}:${c.image_tag}"
+      cpu       = c.cpu
+      memory    = c.memory
+      essential = c.essential
 
-      portMappings = [{
-        containerPort = var.container_port
-        hostPort      = 0            # dynamic host port
-        protocol      = "tcp"
-      }]
+      portMappings = [
+        for pm in c.port_mappings : {
+          containerPort = pm.container_port
+          hostPort      = pm.host_port      # Typically 0 for dynamic port mapping in bridge mode
+          protocol      = pm.protocol
+        }
+      ]
 
-      environment = var.environment_variables
+      environment = [
+        for env_var in c.environment_variables : {
+          name  = env_var.name
+          value = env_var.value
+        }
+      ]
 
       logConfiguration = {
         logDriver = "awslogs"
         options = {
           awslogs-group         = aws_cloudwatch_log_group.ecs_logs.name
           awslogs-region        = var.aws_region
-          awslogs-stream-prefix = "ecs"
+          awslogs-stream-prefix = "ecs/${c.name}" # Differentiates logs by container name
         }
       }
 
-      healthCheck = {
-        command     = var.health_check_command
-        interval    = 30
-        timeout     = 5
-        retries     = 3
-        startPeriod = 60
-      }
+      healthCheck = c.health_check != null ? {
+        command     = c.health_check.command
+        interval    = c.health_check.interval
+        timeout     = c.health_check.timeout
+        retries     = c.health_check.retries
+        startPeriod = c.health_check.startPeriod
+      } : null
     }
   ])
 
   tags = { Name = "${var.project_name}-task-definition" }
 }
 
-#################
-# SERVICE
-#################
 resource "aws_ecs_service" "app_service" {
   name            = "${var.project_name}-service"
   cluster         = var.ecs_cluster_id
@@ -153,67 +123,78 @@ resource "aws_ecs_service" "app_service" {
 
   ordered_placement_strategy {
     type  = "spread"
-    field = "instanceId"
+    field = "attribute:ecs.instance-id" # Spread tasks across instances
   }
 
   dynamic "service_registries" {
-    for_each = var.enable_service_discovery ? [1] : []
+    for_each = {
+      # Create a map of container objects that have service discovery enabled
+      for container_name, container_config in { for c_idx, c_val in var.containers : c_val.name => c_val } :
+      container_name => container_config
+      if var.enable_service_discovery && lookup(container_config, "enable_service_discovery", false) && lookup(container_config, "service_discovery_port", null) != null && contains(keys(aws_service_discovery_service.discovery_services), container_name)
+    }
     content {
-      registry_arn = aws_service_discovery_service.discovery_service[0].arn
+      registry_arn   = aws_service_discovery_service.discovery_services[service_registries.key].arn
+      container_name = service_registries.key # Name of the container in the task definition
+      port           = service_registries.value.service_discovery_port # Container port to register
     }
   }
 
   dynamic "load_balancer" {
-    for_each = var.target_group_arn != "" ? [1] : []
+    for_each = var.target_groups # Iterate through the list of target group configurations
     content {
-      target_group_arn = var.target_group_arn
-      container_name   = var.container_name
-      container_port   = var.container_port
+      target_group_arn = load_balancer.value.target_group_arn
+      container_name   = load_balancer.value.container_name
+      container_port   = load_balancer.value.container_port
     }
   }
 
-  ###################################################
   deployment_maximum_percent         = 200
   deployment_minimum_healthy_percent = 50
 
-  lifecycle { ignore_changes = [desired_count] }
+  lifecycle {
+    ignore_changes = [desired_count] # Useful if desired_count managed by auto-scaling or CI/CD
+  }
 
   tags = { Name = "${var.project_name}-ecs-service" }
 
   depends_on = [
     aws_iam_role_policy_attachment.ecs_task_ecr_pull,
-    aws_iam_role_policy_attachment.ecs_execution_managed
+    aws_iam_role_policy_attachment.ecs_execution_managed,
+    aws_service_discovery_service.discovery_services # Ensure discovery services are created first if used
   ]
 }
 
-#######################################
-# OPTIONAL PRIVATE SERVICE DISCOVERY
-#######################################
 resource "aws_service_discovery_private_dns_namespace" "dns_ns" {
   count       = var.enable_service_discovery ? 1 : 0
-  name        = "${var.project_name}.local"
+  name        = "${var.project_name}.local" # Consider making this configurable
   vpc         = var.vpc_id
-  description = "Service discovery namespace"
+  description = "Service discovery namespace for ${var.project_name}"
+  tags        = { Name = "${var.project_name}-dns-namespace" }
 }
 
-resource "aws_service_discovery_service" "discovery_service" {
-  count = var.enable_service_discovery ? 1 : 0
-  name  = var.container_name
+resource "aws_service_discovery_service" "discovery_services" {
+  for_each = {
+    # Create a discovery service for each container that has it enabled
+    for c in var.containers : c.name => c
+    if var.enable_service_discovery && lookup(c, "enable_service_discovery", false) && lookup(c, "service_discovery_port", null) != null
+  }
+
+  name = each.value.name # Cloud Map service name will be the container name
 
   dns_config {
     namespace_id = aws_service_discovery_private_dns_namespace.dns_ns[0].id
-    routing_policy = "MULTIVALUE"
-
+    routing_policy = "MULTIVALUE" # Appropriate for SRV records, resolves to multiple task IPs/ports
     dns_records {
       ttl  = 10
-      type = "A"
+      type = "SRV" # SRV records for discovering specific host:port combinations
     }
   }
+
+  description = "Service Discovery for container ${each.value.name} in service ${var.project_name}"
+  tags        = { Name = "${var.project_name}-${each.value.name}-discovery" }
 }
 
-###################################################
-# OPTIONAL TARGET-TRACKING AUTO-SCALING
-###################################################
 resource "aws_appautoscaling_target" "ecs_target" {
   count              = var.enable_auto_scaling ? 1 : 0
   max_capacity       = var.max_capacity
@@ -235,7 +216,9 @@ resource "aws_appautoscaling_policy" "ecs_cpu_policy" {
     predefined_metric_specification {
       predefined_metric_type = "ECSServiceAverageCPUUtilization"
     }
-    target_value = var.cpu_target_value
+    target_value       = var.cpu_target_value
+    scale_in_cooldown  = 300 # Optional: Cooldown period in seconds
+    scale_out_cooldown = 60  # Optional: Cooldown period in seconds
   }
 }
 
@@ -251,6 +234,8 @@ resource "aws_appautoscaling_policy" "ecs_memory_policy" {
     predefined_metric_specification {
       predefined_metric_type = "ECSServiceAverageMemoryUtilization"
     }
-    target_value = var.memory_target_value
+    target_value       = var.memory_target_value
+    scale_in_cooldown  = 300 # Optional: Cooldown period in seconds
+    scale_out_cooldown = 60  # Optional: Cooldown period in seconds
   }
 }

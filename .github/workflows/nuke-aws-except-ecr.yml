@@ -106,7 +106,7 @@ jobs:
       - name: Run aws-nuke (DESTRUCTIVE)
         shell: bash
         run: |
-          aws-nuke -c Terraform/aws_nuke/nuke-config.final.yaml --no-dry-run --force --force-sleep 3 --no-alias-check --quiet
+          aws-nuke -c Terraform/aws_nuke/nuke-config.final.yaml --no-dry-run --force --force-sleep 3 --quiet
 
       - name: Finished
         run: echo "Nuke completed"

@@ -1,118 +1,74 @@
-name: Nuke AWS except ECR
+name: Nuke AWS (except ECR)
 
 on:
   workflow_dispatch:
     inputs:
-      environment:
-        description: "GitHub Environment to use (secrets/vars)."
-        # NOTE: omit `type: string` — string is default; using it causes a validation error
-        default: infrastructure-khanghv2406
+      confirm:
+        description: "Type NUKE to confirm irreversible deletion (except ECR)"
         required: true
-      dry_run:
-        description: "Preview only (do NOT delete)."
-        type: boolean
-        required: true
-        default: true
+        default: ""
 
 permissions:
+  id-token: write  # for OIDC to AWS
   contents: read
 
 jobs:
   nuke:
-    name: Nuke AWS (except ECR)
+    name: aws-nuke
     runs-on: ubuntu-latest
-    environment:
-      name: ${{ inputs.environment }}
+    if: ${{ github.event.inputs.confirm == 'NUKE' }}
     env:
-      # Resolve from the selected environment's vars (fallback provided inline)
-      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
-
+      AWS_REGION: us-east-1
     steps:
-      - name: Configure AWS credentials (Environment secrets)
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_NUKE_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Set up Go (to install aws-nuke)
-        uses: actions/setup-go@v5
-        with:
-          go-version: stable
+      - name: Get AWS Account ID
+        id: acct
+        shell: bash
+        run: |
+          echo "account_id=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_OUTPUT"
+
+      - name: Show account ID
+        run: echo "Target Account: ${{ steps.acct.outputs.account_id }}"
 
       - name: Install aws-nuke
+        shell: bash
         run: |
-          go install github.com/rebuy-de/aws-nuke/v2/cmd/aws-nuke@latest
-          echo "$HOME/go/bin" >> $GITHUB_PATH
-          aws-nuke --version
+          VERSION=2.25.0
+          curl -sSL -o aws-nuke.tgz https://github.com/rebuy-de/aws-nuke/releases/download/v${VERSION}/aws-nuke-v${VERSION}-linux-amd64.tar.gz
+          tar -xzf aws-nuke.tgz
+          sudo mv aws-nuke-v${VERSION}-linux-amd64/aws-nuke /usr/local/bin/aws-nuke
+          aws-nuke version
 
-      - name: Resolve Account ID dynamically
-        id: acct
+      - name: Build final config (inject account ID)
+        id: buildcfg
+        shell: bash
         run: |
-          set -e
-          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          echo "Using account: $ACCOUNT_ID"
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          BASE=Terraform/aws_nuke/nuke-config.yaml
+          FINAL=Terraform/aws_nuke/nuke-config.final.yaml
+          ACCOUNT_ID="${{ steps.acct.outputs.account_id }}"
+          cp "$BASE" "$FINAL"
+          {
+            echo "bypass-alias-check-accounts:";
+            echo "  - \"$ACCOUNT_ID\"";
+            echo "";
+            echo "accounts:";
+            echo "  \"$ACCOUNT_ID\": {}";
+          } >> "$FINAL"
+          echo '----- Final Config -----'
+          cat "$FINAL"
 
-      - name: Generate nuke-config.yaml (exclude ECR; dynamic account)
+      - name: Run aws-nuke (DESTRUCTIVE)
+        shell: bash
         run: |
-          mkdir -p aws_nuke
-          cat > aws_nuke/nuke-config.yaml <<'EOF'
-regions:
-  - global
-  - us-east-1
+          aws-nuke -c Terraform/aws_nuke/nuke-config.final.yaml --no-dry-run --force --force-sleep 3 --no-alias-check --quiet
 
-blocklist:
-  - "999999999999"
-
-resource-types:
-  excludes:
-    - IAMUser
-    - IAMUserPolicyAttachment
-    - IAMUserPolicy
-    - IAMUserAccessKey
-    - IAMGroup
-    - IAMUserGroupAttachment
-    - IAMGroupPolicyAttachment
-
-    - ECRRepository
-    - ECRRepositoryPolicy
-    - ECRPublicRepository
-    - ECRPublicRepositoryPolicy
- 
-bypass-alias-check-accounts:
-  - "__ACCOUNT_ID__"
-
-accounts:
-  "__ACCOUNT_ID__": {}
-EOF
-          sed -i "s/__ACCOUNT_ID__/${{ steps.acct.outputs.account_id }}/g" aws_nuke/nuke-config.yaml
-          echo '--- nuke-config.yaml used ---'
-          cat aws_nuke/nuke-config.yaml
-
-      - name: Run aws-nuke (dry-run by default)
-        env:
-          DRY_RUN: ${{ inputs.dry_run }}
-        run: |
-          set -e
-          FLAGS=""
-          if [ "$DRY_RUN" = "true" ]; then
-            echo "Dry-run enabled. No resources will be deleted. Set dry_run to false to actually delete."
-          else
-            FLAGS="--no-dry-run"
-          fi
-
-          aws-nuke nuke \
-            -c ./aws_nuke/nuke-config.yaml \
-            --no-alias-check \
-            --no-prompt \
-            $FLAGS
-
-      - name: Summary
-        if: always()
-        run: |
-          echo "## Nuke AWS except ECR" >> $GITHUB_STEP_SUMMARY
-          echo "- **Environment**: ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Region**: ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Account ID**: ${{ steps.acct.outputs.account_id }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Dry run**: ${{ inputs.dry_run }}" >> $GITHUB_STEP_SUMMARY
+      - name: Finished
+        run: echo "Nuke completed"

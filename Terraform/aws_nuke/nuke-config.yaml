@@ -11,6 +11,9 @@ resource-types:
   - IAMUserPolicyAttachment
   - IAMUserPolicy
   - IAMUserAccessKey
+  - IAMGroup
+  - IAMUserGroupAttachment
+  - IAMGroupPolicyAttachment
   
   - ECRRepository
   - ECRRepositoryPolicy
@@ -18,7 +21,7 @@ resource-types:
   - ECRPublicRepositoryPolicy
  
 bypass-alias-check-accounts:
-  - "242201290212"
+  - "897279497116"
 
 accounts:
-  "242201290212": {} 
+  "897279497116": {} 

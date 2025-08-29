@@ -60,10 +60,26 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION=2.25.0
-          URL="https://github.com/rebuy-de/aws-nuke/releases/download/v${VERSION}/aws-nuke-v${VERSION}-linux-amd64.tar.gz"
-          echo "Downloading: $URL"
-          curl -sSL -o aws-nuke.tgz "$URL"
+          VERSION=3.58.0
+          # Try multiple possible asset URLs (ekristen primary, rebuy-de fallback)
+          URLS=(
+            "https://github.com/ekristen/aws-nuke/releases/download/v${VERSION}/aws-nuke-v${VERSION}-linux-amd64.tar.gz"
+            "https://github.com/ekristen/aws-nuke/releases/download/v${VERSION}/aws-nuke_${VERSION}_linux_amd64.tar.gz"
+            "https://github.com/ekristen/aws-nuke/releases/download/v${VERSION}/aws-nuke_${VERSION}_linux_x86_64.tar.gz"
+            "https://github.com/rebuy-de/aws-nuke/releases/download/v${VERSION}/aws-nuke-v${VERSION}-linux-amd64.tar.gz"
+          )
+          success=false
+          for URL in "${URLS[@]}"; do
+            echo "Attempting download: $URL"
+            if curl -fLsS -o aws-nuke.tgz "$URL"; then
+              success=true
+              break
+            fi
+          done
+          if [ "$success" != true ]; then
+            echo "::error::Failed to download aws-nuke v${VERSION} from all known URLs" >&2
+            exit 1
+          fi
           tar -xzf aws-nuke.tgz
           BIN=""
           if [ -d "aws-nuke-v${VERSION}-linux-amd64" ] && [ -f "aws-nuke-v${VERSION}-linux-amd64/aws-nuke" ]; then
@@ -106,7 +122,7 @@ jobs:
       - name: Run aws-nuke (DESTRUCTIVE)
         shell: bash
         run: |
-          aws-nuke -c Terraform/aws_nuke/nuke-config.final.yaml --no-dry-run --force --force-sleep 3 --quiet
+          aws-nuke -c Terraform/aws_nuke/nuke-config.final.yaml --no-dry-run --force --force-sleep 3 --no-alias-check --quiet
 
       - name: Finished
         run: echo "Nuke completed"

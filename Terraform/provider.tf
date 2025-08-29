@@ -11,18 +11,13 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "microservices-dot-net-template-terraform-state"
-    key            = "terraform/state.tfstate"
-    region         = "us-east-1"
-    dynamodb_table = "microservices-dot-net-template-terraform-locks"
-    encrypt        = true
-    profile        = "terraform-user"
+    key     = "terraform/state.tfstate"
+    encrypt = true
   }
 }
 
 
 provider "aws" {
-  region  = "us-east-1"
-  profile = "terraform-user"
+  region = "us-east-1"
 
 }

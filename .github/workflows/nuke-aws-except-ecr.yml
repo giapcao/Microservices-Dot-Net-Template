@@ -59,11 +59,31 @@ jobs:
       - name: Install aws-nuke
         shell: bash
         run: |
+          set -euo pipefail
           VERSION=2.25.0
-          curl -sSL -o aws-nuke.tgz https://github.com/rebuy-de/aws-nuke/releases/download/v${VERSION}/aws-nuke-v${VERSION}-linux-amd64.tar.gz
+          URL="https://github.com/rebuy-de/aws-nuke/releases/download/v${VERSION}/aws-nuke-v${VERSION}-linux-amd64.tar.gz"
+          echo "Downloading: $URL"
+          curl -sSL -o aws-nuke.tgz "$URL"
           tar -xzf aws-nuke.tgz
-          sudo mv aws-nuke-v${VERSION}-linux-amd64/aws-nuke /usr/local/bin/aws-nuke
-          aws-nuke version
+          BIN=""
+          if [ -d "aws-nuke-v${VERSION}-linux-amd64" ] && [ -f "aws-nuke-v${VERSION}-linux-amd64/aws-nuke" ]; then
+            BIN="aws-nuke-v${VERSION}-linux-amd64/aws-nuke"
+          elif [ -f "aws-nuke-v${VERSION}-linux-amd64" ]; then
+            BIN="aws-nuke-v${VERSION}-linux-amd64"
+          elif [ -f "aws-nuke" ]; then
+            BIN="aws-nuke"
+          else
+            BIN=$(find . -maxdepth 2 -type f -name 'aws-nuke*linux-amd64*' -o -name 'aws-nuke' | head -n 1 || true)
+          fi
+          if [ -z "$BIN" ]; then
+            echo "::error::aws-nuke binary not found after extraction" >&2
+            ls -la
+            exit 1
+          fi
+          echo "Using binary: $BIN"
+          sudo mv "$BIN" /usr/local/bin/aws-nuke
+          sudo chmod +x /usr/local/bin/aws-nuke
+          /usr/local/bin/aws-nuke version
 
       - name: Build final config (inject account ID)
         id: buildcfg

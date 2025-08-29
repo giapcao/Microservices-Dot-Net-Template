@@ -11,16 +11,12 @@ terraform {
   }
 
   backend "s3" {
-    bucket = "khangstoragetest"
-    key    = "terraform/state.tfstate"
-    region = "ap-southeast-1"
-    endpoints = {
-      s3 = "https://s3.ap-southeast-1.wasabisys.com"
-    }
-    profile                     = "wasabi-user"
-    use_path_style              = true
-    skip_credentials_validation = true
-    skip_requesting_account_id  = true
+    bucket         = "microservices-dot-net-template-terraform-state"
+    key            = "terraform/state.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "microservices-dot-net-template-terraform-locks"
+    encrypt        = true
+    profile        = "terraform-user"
   }
 }
 

@@ -1,0 +1,73 @@
+name: Bootstrap Terraform Backend (S3 + DynamoDB)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "GitHub Environment to use."
+        type: choice
+        options: [infrastructure-khanghv2406]
+        default: infrastructure-khanghv2406
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  PROJECT_NAME: ${{ vars.PROJECT_NAME || 'microservices-dot-net-template' }}
+
+jobs:
+  bootstrap:
+    name: create-backend
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Init (local backend)
+        working-directory: Terraform/bootstrap
+        run: terraform init -input=false
+
+      - name: Validate
+        working-directory: Terraform/bootstrap
+        run: terraform validate
+
+      - name: Plan
+        id: plan
+        working-directory: Terraform/bootstrap
+        env:
+          TF_VAR_region: ${{ env.AWS_REGION }}
+          TF_VAR_project_name: ${{ env.PROJECT_NAME }}
+        run: |
+          terraform plan -input=false -out=tfplan
+
+      - name: Apply
+        if: ${{ steps.plan.outcome == 'success' }}
+        working-directory: Terraform/bootstrap
+        env:
+          TF_VAR_region: ${{ env.AWS_REGION }}
+          TF_VAR_project_name: ${{ env.PROJECT_NAME }}
+        run: |
+          terraform apply -input=false -auto-approve tfplan
+
+      - name: Show outputs
+        working-directory: Terraform/bootstrap
+        run: |
+          terraform output -json | jq .
+
+

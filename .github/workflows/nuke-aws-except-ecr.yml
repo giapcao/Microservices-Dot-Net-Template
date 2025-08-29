@@ -9,7 +9,6 @@ on:
         default: ""
 
 permissions:
-  id-token: write  # for OIDC to AWS
   contents: read
 
 jobs:
@@ -23,10 +22,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials (OIDC)
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_NUKE_ROLE_ARN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Get AWS Account ID
@@ -36,7 +36,9 @@ jobs:
           echo "account_id=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_OUTPUT"
 
       - name: Show account ID
-        run: echo "Target Account: ${{ steps.acct.outputs.account_id }}"
+        shell: bash
+        run: |
+          echo 'Target Account: ${{ steps.acct.outputs.account_id }}'
 
       - name: Install aws-nuke
         shell: bash

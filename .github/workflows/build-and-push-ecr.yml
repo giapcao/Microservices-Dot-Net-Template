@@ -7,10 +7,10 @@ on:
         description: "GitHub Environment to use."
         type: choice
         options: [infrastructure-khanghv2406]
-        default: prod
+        default: infrastructure-khanghv2406
         required: true
 
-# These will fall back to defaults if the selected environment has no vars set
+# Top-level env falls back to repo vars if env vars are absent.
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
   PROJECT_NAME: ${{ vars.PROJECT_NAME || 'default' }}
@@ -28,30 +28,33 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Ensure jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Discover microservices
         id: get-services
         run: |
           services=()
-          if [ -d "Backend/Microservices" ]; then
-            for dir in Backend/Microservices/*/; do
-              if [ -d "$dir" ]; then
-                service_name=$(basename "$dir")
-                if [[ ! "$service_name" =~ ^(SharedLibrary|sharedlibrary)$ ]]; then
-                  if [ -f "${dir}Dockerfile" ] || [ -f "${dir}dockerfile" ] || [ -f "${dir}DockerFile" ]; then
-                    services+=("$service_name")
-                    echo "Found microservice: $service_name with Dockerfile"
-                  else
-                    echo "Skipping $service_name (no Dockerfile found)"
-                  fi
+          BASE="Backend/Microservices"
+          if [ -d "$BASE" ]; then
+            for dir in "$BASE"/*/; do
+              [ -d "$dir" ] || continue
+              service_name=$(basename "$dir")
+              if [[ ! "$service_name" =~ ^(SharedLibrary|sharedlibrary)$ ]]; then
+                if [ -f "${dir}Dockerfile" ] || [ -f "${dir}dockerfile" ] || [ -f "${dir}DockerFile" ]; then
+                  services+=("$service_name")
+                  echo "Found microservice: $service_name with Dockerfile"
+                else
+                  echo "Skipping $service_name (no Dockerfile found)"
                 fi
               fi
             done
           fi
           if [ ${#services[@]} -eq 0 ]; then
-            echo "services=[]" >> $GITHUB_OUTPUT
+            echo "services=[]" >> "$GITHUB_OUTPUT"
           else
             services_json=$(printf '%s\n' "${services[@]}" | jq -R . | jq -s -c .)
-            echo "services=$services_json" >> $GITHUB_OUTPUT
+            echo "services=$services_json" >> "$GITHUB_OUTPUT"
             echo "Discovered services: $services_json"
           fi
 
@@ -61,16 +64,18 @@ jobs:
     needs: discover-services
     if: ${{ needs.discover-services.outputs.services != '[]' }}
     environment:
-      name: ${{ inputs.environment }}   # <-- binds to environment; secrets/vars come from here
+      name: ${{ inputs.environment }}   # use environment-level secrets/vars
     strategy:
       matrix:
         service: ${{ fromJson(needs.discover-services.outputs.services) }}
       fail-fast: false
 
-    # ensure env also resolves env-level vars even if top-level is missed
+    # Pull env vars from the selected environment
     env:
       AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
       PROJECT_NAME: ${{ vars.PROJECT_NAME || 'default' }}
+      # Optional: per-environment repo name
+      ECR_REPO_NAME: ${{ vars.ECR_REPO_NAME || format('{0}-{1}-ecr', vars.PROJECT_NAME || 'default', inputs.environment) }}
 
     steps:
       - name: Checkout
@@ -79,8 +84,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}          # from environment
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}  # from environment
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}          # environment secret
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}  # environment secret
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
@@ -92,14 +97,14 @@ jobs:
 
       - name: Set image tag
         id: set-tag
-        run: echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
+        run: echo "IMAGE_TAG=${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
       - name: Create ECR repository if it doesn't exist
         run: |
-          REPO_NAME="${{ env.PROJECT_NAME }}-ecr"
+          REPO_NAME="${{ env.ECR_REPO_NAME }}"
           aws ecr describe-repositories --repository-names "$REPO_NAME" --region "${{ env.AWS_REGION }}" \
           || aws ecr create-repository --repository-name "$REPO_NAME" --region "${{ env.AWS_REGION }}"
-          echo "REPO_NAME=$REPO_NAME" >> $GITHUB_ENV
+          echo "REPO_NAME=$REPO_NAME" >> "$GITHUB_ENV"
 
       - name: Detect Dockerfile path
         id: dockerfile
@@ -107,7 +112,7 @@ jobs:
           BASE="Backend/Microservices/${{ matrix.service }}"
           for name in Dockerfile dockerfile DockerFile; do
             if [ -f "$BASE/$name" ]; then
-              echo "path=$BASE/$name" >> $GITHUB_OUTPUT
+              echo "path=$BASE/$name" >> "$GITHUB_OUTPUT"
               echo "Found Dockerfile at: $BASE/$name"
               exit 0
             fi
@@ -115,6 +120,7 @@ jobs:
           echo "No Dockerfile found under $BASE" >&2
           exit 1
 
+      # IMPORTANT: Use the SAME CONTEXT as docker compose (parent folder)
       - name: Build and push image to Amazon ECR with cache
         id: build-image
         uses: docker/build-push-action@v5
@@ -122,35 +128,33 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ steps.set-tag.outputs.IMAGE_TAG }}
         with:
-          context: Backend/Microservices/${{ matrix.service }}
+          context: Backend/Microservices
           file: ${{ steps.dockerfile.outputs.path }}
           build-args: |
             SERVICE_NAME=${{ matrix.service }}
           push: true
           tags: |
-            ${{ env.ECR_REGISTRY }}/${{ env.PROJECT_NAME }}-ecr:${{ matrix.service }}-${{ env.IMAGE_TAG }}
-            ${{ env.ECR_REGISTRY }}/${{ env.PROJECT_NAME }}-ecr:${{ matrix.service }}-latest
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO_NAME }}:${{ matrix.service }}-${{ env.IMAGE_TAG }}
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO_NAME }}:${{ matrix.service }}-latest
           cache-from: |
             type=gha,scope=${{ matrix.service }}
-            type=registry,ref=${{ env.ECR_REGISTRY }}/${{ env.PROJECT_NAME }}-ecr:${{ matrix.service }}-cache
+            type=registry,ref=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO_NAME }}:${{ matrix.service }}-cache
           cache-to: |
             type=gha,mode=max,scope=${{ matrix.service }}
-            type=registry,ref=${{ env.ECR_REGISTRY }}/${{ env.PROJECT_NAME }}-ecr:${{ matrix.service }}-cache,mode=max
+            type=registry,ref=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO_NAME }}:${{ matrix.service }}-cache,mode=max
           platforms: linux/amd64
 
       - name: Output build information
         run: |
           echo "Successfully built and pushed ${{ matrix.service }}"
-          echo "Image: ${{ steps.login-ecr.outputs.registry }}/${{ env.PROJECT_NAME }}-ecr:${{ matrix.service }}-${{ steps.set-tag.outputs.IMAGE_TAG }}"
-          echo "image=${{ steps.login-ecr.outputs.registry }}/${{ env.PROJECT_NAME }}-ecr:${{ matrix.service }}-${{ steps.set-tag.outputs.IMAGE_TAG }}" >> $GITHUB_OUTPUT
+          echo "Image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO_NAME }}:${{ matrix.service }}-${{ steps.set-tag.outputs.IMAGE_TAG }}"
 
       - name: Output image details
         run: |
           echo "### Build Summary for ${{ matrix.service }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Service**: ${{ matrix.service }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Project**: ${{ env.PROJECT_NAME }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Repository**: ${{ env.PROJECT_NAME }}-ecr" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image**: ${{ steps.build-image.outputs.image }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Repository**: ${{ env.ECR_REPO_NAME }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Region**: ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
 
   summary:
@@ -159,7 +163,7 @@ jobs:
     needs: [discover-services, build-and-push]
     if: always()
     environment:
-      name: ${{ inputs.environment }}  # pick up environment-level vars for summary too
+      name: ${{ inputs.environment }}
     steps:
       - name: Generate summary
         run: |

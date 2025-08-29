@@ -3,10 +3,19 @@ name: Nuke AWS (except ECR)
 on:
   workflow_dispatch:
     inputs:
+      environment:
+        description: "GitHub Environment to use."
+        type: choice
+        options: [infrastructure-khanghv2406]
+        default: infrastructure-khanghv2406
+        required: true
       confirm:
         description: "Type NUKE to confirm irreversible deletion (except ECR)"
         required: true
         default: ""
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
 
 permissions:
   contents: read
@@ -16,8 +25,10 @@ jobs:
     name: aws-nuke
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.confirm == 'NUKE' }}
+    environment:
+      name: ${{ inputs.environment }}
     env:
-      AWS_REGION: us-east-1
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,6 +39,11 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify AWS identity
+        shell: bash
+        run: |
+          aws sts get-caller-identity
 
       - name: Get AWS Account ID
         id: acct

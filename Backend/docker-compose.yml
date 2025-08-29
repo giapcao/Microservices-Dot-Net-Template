@@ -63,8 +63,8 @@ services:
 
   api-gateway:
     build:
-      context: ./ApiGateway
-      dockerfile: Dockerfile
+      context: ./Microservices
+      dockerfile: ./ApiGateway/Dockerfile
     image: api-gateway
     container_name: api-gateway
     ports:

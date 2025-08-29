@@ -1,11 +1,11 @@
 name: Build and Push Microservices to ECR
 
 on:
-  workflow_dispatch:  # Manual trigger
+  workflow_dispatch:
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
-  PROJECT_NAME: ${{ vars.PROJECT_NAME || 'goodmeal' }}
+  PROJECT_NAME: ${{ vars.PROJECT_NAME || 'default' }}
 
 permissions:
   contents: read
@@ -19,21 +19,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       - name: Discover microservices
         id: get-services
         run: |
-          # Find all directories in Backend/Microservices that contain Dockerfile (case insensitive)
-          # Exclude SharedLibrary and ApiGateway
           services=()
-          
           if [ -d "Backend/Microservices" ]; then
             for dir in Backend/Microservices/*/; do
               if [ -d "$dir" ]; then
                 service_name=$(basename "$dir")
-                # Skip SharedLibrary and ApiGateway (case insensitive)
-                if [[ ! "$service_name" =~ ^(SharedLibrary|ApiGateway)$ ]] && [[ ! "$service_name" =~ ^(sharedlibrary|apigateway)$ ]]; then
-                  # Check if Dockerfile exists (case insensitive)
+                if [[ ! "$service_name" =~ ^(SharedLibrary)$ ]] && [[ ! "$service_name" =~ ^(sharedlibrary)$ ]]; then
                   if [ -f "${dir}Dockerfile" ] || [ -f "${dir}dockerfile" ] || [ -f "${dir}DockerFile" ]; then
                     services+=("$service_name")
                     echo "Found microservice: $service_name with Dockerfile"
@@ -44,13 +39,9 @@ jobs:
               fi
             done
           fi
-          
-          # Ensure we have at least one service
           if [ ${#services[@]} -eq 0 ]; then
-            echo "No microservices found with Dockerfiles"
             echo "services=[]" >> $GITHUB_OUTPUT
           else
-            # Convert array to JSON format for matrix strategy (compact format)
             services_json=$(printf '%s\n' "${services[@]}" | jq -R . | jq -s -c .)
             echo "services=$services_json" >> $GITHUB_OUTPUT
             echo "Discovered services: $services_json"
@@ -87,18 +78,12 @@ jobs:
       - name: Set image tag
         id: set-tag
         run: |
-          # Use commit SHA as image tag
           echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
 
       - name: Create ECR repository if it doesn't exist
         run: |
-          # Use PROJECT_NAME with fixed 'ecr' tag for repository naming
           REPO_NAME="${{ env.PROJECT_NAME }}-ecr"
-          
-          # Check if repository exists, create if it doesn't
-          aws ecr describe-repositories --repository-names $REPO_NAME --region ${{ env.AWS_REGION }} || \
-          aws ecr create-repository --repository-name $REPO_NAME --region ${{ env.AWS_REGION }}
-          
+          aws ecr describe-repositories --repository-names $REPO_NAME --region ${{ env.AWS_REGION }} || aws ecr create-repository --repository-name $REPO_NAME --region ${{ env.AWS_REGION }}
           echo "REPO_NAME=$REPO_NAME" >> $GITHUB_ENV
 
       - name: Build and push image to Amazon ECR with cache
@@ -126,13 +111,13 @@ jobs:
 
       - name: Output build information
         run: |
-          echo "✅ Successfully built and pushed ${{ matrix.service }}"
-          echo "📦 Image: ${{ steps.login-ecr.outputs.registry }}/${{ env.PROJECT_NAME }}-ecr:${{ matrix.service }}-${{ steps.set-tag.outputs.IMAGE_TAG }}"
+          echo "Successfully built and pushed ${{ matrix.service }}"
+          echo "Image: ${{ steps.login-ecr.outputs.registry }}/${{ env.PROJECT_NAME }}-ecr:${{ matrix.service }}-${{ steps.set-tag.outputs.IMAGE_TAG }}"
           echo "image=${{ steps.login-ecr.outputs.registry }}/${{ env.PROJECT_NAME }}-ecr:${{ matrix.service }}-${{ steps.set-tag.outputs.IMAGE_TAG }}" >> $GITHUB_OUTPUT
 
       - name: Output image details
         run: |
-          echo "### 🚀 Build Summary for ${{ matrix.service }}" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Summary for ${{ matrix.service }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Service**: ${{ matrix.service }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Project**: ${{ env.PROJECT_NAME }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Repository**: ${{ env.PROJECT_NAME }}-ecr" >> $GITHUB_STEP_SUMMARY
@@ -147,7 +132,7 @@ jobs:
     steps:
       - name: Generate summary
         run: |
-          echo "## 📋 Microservices Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Microservices Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Discovered Services**: ${{ needs.discover-services.outputs.services }}" >> $GITHUB_STEP_SUMMARY
           echo "**AWS Region**: ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
@@ -155,9 +140,9 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [ "${{ needs.build-and-push.result }}" == "success" ]; then
-            echo "✅ All microservices built and pushed successfully!" >> $GITHUB_STEP_SUMMARY
+            echo "All microservices built and pushed successfully!" >> $GITHUB_STEP_SUMMARY
           elif [ "${{ needs.build-and-push.result }}" == "failure" ]; then
-            echo "❌ Some microservices failed to build. Check the logs above." >> $GITHUB_STEP_SUMMARY
+            echo "Some microservices failed to build. Check the logs above." >> $GITHUB_STEP_SUMMARY
           else
-            echo "⚠️ Build completed with warnings or was skipped." >> $GITHUB_STEP_SUMMARY
+            echo "Build completed with warnings or was skipped." >> $GITHUB_STEP_SUMMARY
           fi 

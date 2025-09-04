@@ -1,0 +1,198 @@
+name: Deploy Infrastructure with Terraform
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "GitHub Environment to use."
+        type: choice
+        options: [infrastructure-khanghv2406]
+        default: infrastructure-khanghv2406
+        required: true
+      action:
+        description: "Terraform action to perform"
+        type: choice
+        options: [plan, apply, destroy]
+        default: plan
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  PROJECT_NAME: ${{ vars.PROJECT_NAME || 'microservices-dot-net-template' }}
+
+jobs:
+  terraform:
+    name: terraform-${{ inputs.action }}
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Initialize Terraform with remote backend
+        working-directory: Terraform
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
+          PROJECT_NAME: ${{ env.PROJECT_NAME }}
+        run: |
+          BUCKET="${PROJECT_NAME}-terraform-state"
+          TABLE="${PROJECT_NAME}-terraform-locks"
+          
+          echo "Initializing Terraform with backend:"
+          echo "  Bucket: ${BUCKET}"
+          echo "  Key: terraform/state.tfstate"
+          echo "  Region: ${AWS_REGION}"
+          echo "  DynamoDB Table: ${TABLE}"
+          
+          terraform init \
+            -backend-config="bucket=${BUCKET}" \
+            -backend-config="key=terraform/state.tfstate" \
+            -backend-config="region=${AWS_REGION}" \
+            -backend-config="dynamodb_table=${TABLE}" \
+            -backend-config="encrypt=true" \
+            -input=false
+
+      - name: Validate Terraform
+        working-directory: Terraform
+        run: terraform validate
+
+      - name: Format check
+        working-directory: Terraform
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: Terraform
+        env:
+          TF_VAR_region: ${{ env.AWS_REGION }}
+          TF_VAR_project_name: ${{ env.PROJECT_NAME }}
+          TF_VAR_aws_region: ${{ env.AWS_REGION }}
+        run: |
+          terraform plan -input=false -out=tfplan -detailed-exitcode
+        continue-on-error: true
+
+      - name: Plan Status Check
+        if: steps.plan.outcome == 'failure'
+        run: |
+          echo "Terraform plan failed!"
+          exit 1
+
+      - name: Show Plan
+        working-directory: Terraform
+        run: terraform show -no-color tfplan
+
+      - name: Terraform Apply
+        if: inputs.action == 'apply' && steps.plan.outcome == 'success'
+        working-directory: Terraform
+        env:
+          TF_VAR_region: ${{ env.AWS_REGION }}
+          TF_VAR_project_name: ${{ env.PROJECT_NAME }}
+          TF_VAR_aws_region: ${{ env.AWS_REGION }}
+        run: |
+          echo "Applying Terraform changes..."
+          terraform apply -input=false -auto-approve tfplan
+
+      - name: Terraform Destroy
+        if: inputs.action == 'destroy'
+        working-directory: Terraform
+        env:
+          TF_VAR_region: ${{ env.AWS_REGION }}
+          TF_VAR_project_name: ${{ env.PROJECT_NAME }}
+          TF_VAR_aws_region: ${{ env.AWS_REGION }}
+        run: |
+          echo "⚠️  WARNING: This will destroy all infrastructure!"
+          echo "Sleeping for 10 seconds to allow cancellation..."
+          sleep 10
+          terraform destroy -input=false -auto-approve
+
+      - name: Show Outputs
+        if: inputs.action == 'apply'
+        working-directory: Terraform
+        run: |
+          echo "## Infrastructure Outputs" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          terraform output >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate Summary
+        if: always()
+        run: |
+          echo "## Terraform Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment**: ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Action**: ${{ inputs.action }}" >> $GITHUB_STEP_SUMMARY
+          echo "**AWS Region**: ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Project**: ${{ env.PROJECT_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ inputs.action }}" == "plan" ]; then
+            echo "✅ Plan completed successfully! Review the changes above." >> $GITHUB_STEP_SUMMARY
+            echo "To apply these changes, run this workflow again with action: 'apply'" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ inputs.action }}" == "apply" ] && [ "${{ job.status }}" == "success" ]; then
+            echo "🚀 Infrastructure deployed successfully!" >> $GITHUB_STEP_SUMMARY
+            echo "Check the outputs above for connection details." >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ inputs.action }}" == "destroy" ] && [ "${{ job.status }}" == "success" ]; then
+            echo "💥 Infrastructure destroyed successfully!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Deployment failed. Check the logs above for details." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload Terraform Plan
+        if: inputs.action == 'plan'
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-${{ github.sha }}
+          path: Terraform/tfplan
+          retention-days: 30
+
+      - name: Comment Plan on PR (if applicable)
+        if: inputs.action == 'plan' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const { execSync } = require('child_process');
+            
+            try {
+              const plan = execSync('cd Terraform && terraform show -no-color tfplan', { encoding: 'utf8' });
+              const comment = `## Terraform Plan 📋
+              
+              <details>
+              <summary>Show Plan</summary>
+              
+              \`\`\`
+              ${plan}
+              \`\`\`
+              
+              </details>
+              
+              **Action Required**: Review the plan and run with \`action: apply\` to deploy.
+              `;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } catch (error) {
+              console.log('Could not post plan comment:', error.message);
+            }

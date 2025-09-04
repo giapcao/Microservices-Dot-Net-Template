@@ -118,6 +118,7 @@ var app = builder.Build();
 
 // Health endpoint for ALB
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 await app.UseOcelot();
 app.Run();

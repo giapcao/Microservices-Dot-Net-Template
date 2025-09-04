@@ -118,7 +118,7 @@ module "ecs" {
   task_cpu    = 1000
   task_memory = 1000
   alb_security_group_id = module.alb.alb_sg_id
-  assign_public_ip      = true
+  assign_public_ip      = false
 
   containers = [
     { # Guest Container Definition

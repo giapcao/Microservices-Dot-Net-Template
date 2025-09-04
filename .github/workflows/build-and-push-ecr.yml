@@ -148,6 +148,16 @@ jobs:
         run: |
           echo "Successfully built and pushed ${{ matrix.service }}"
           echo "Image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO_NAME }}:${{ matrix.service }}-${{ steps.set-tag.outputs.IMAGE_TAG }}"
+          echo ""
+          echo "=== Terraform Configuration ==="
+          echo "For service '${{ matrix.service }}', update your Terraform variables.tf:"
+          echo ""
+          echo "ecs_container_image_repository_url = \"${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO_NAME }}\""
+          echo "ecs_container_image_tag            = \"${{ matrix.service }}-${{ steps.set-tag.outputs.IMAGE_TAG }}\""
+          echo ""
+          echo "Or use latest tag:"
+          echo "ecs_container_image_tag            = \"${{ matrix.service }}-latest\""
+          echo "=================================="
 
       - name: Output image details
         run: |
@@ -156,6 +166,14 @@ jobs:
           echo "- **Project**: ${{ env.PROJECT_NAME }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Repository**: ${{ env.ECR_REPO_NAME }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Region**: ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Terraform Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`hcl" >> $GITHUB_STEP_SUMMARY
+          echo "ecs_container_image_repository_url = \"${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO_NAME }}\"" >> $GITHUB_STEP_SUMMARY
+          echo "ecs_container_image_tag            = \"${{ matrix.service }}-${{ steps.set-tag.outputs.IMAGE_TAG }}\"" >> $GITHUB_STEP_SUMMARY
+          echo "# Or use latest:" >> $GITHUB_STEP_SUMMARY
+          echo "ecs_container_image_tag            = \"${{ matrix.service }}-latest\"" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
   summary:
     name: Build Summary
@@ -164,7 +182,22 @@ jobs:
     if: always()
     environment:
       name: ${{ inputs.environment }}
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      PROJECT_NAME: ${{ vars.PROJECT_NAME || 'default' }}
+      ECR_REPO_NAME: ${{ vars.ECR_REPO_NAME || format('{0}-{1}-ecr', vars.PROJECT_NAME || 'default', inputs.environment) }}
     steps:
+      - name: Configure AWS credentials for summary
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR for summary
+        id: login-ecr-summary
+        uses: aws-actions/amazon-ecr-login@v2
+
       - name: Generate summary
         run: |
           echo "## Microservices Build Summary" >> $GITHUB_STEP_SUMMARY
@@ -177,6 +210,24 @@ jobs:
 
           if [ "${{ needs.build-and-push.result }}" == "success" ]; then
             echo "All microservices built and pushed successfully!" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🚀 Ready to Deploy - Copy these values to Terraform:" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`hcl" >> $GITHUB_STEP_SUMMARY
+            echo "# Update these in your Terraform variables.tf" >> $GITHUB_STEP_SUMMARY
+            echo "# ECR Repository URL (same for all services):" >> $GITHUB_STEP_SUMMARY
+            echo "# ${{ steps.login-ecr-summary.outputs.registry }}/${{ env.ECR_REPO_NAME }}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Parse the services JSON and output each service
+            SERVICES='${{ needs.discover-services.outputs.services }}'
+            echo "$SERVICES" | jq -r '.[]' | while read service; do
+              echo "# For $service:" >> $GITHUB_STEP_SUMMARY
+              echo "ecs_container_image_repository_url = \"${{ steps.login-ecr-summary.outputs.registry }}/${{ env.ECR_REPO_NAME }}\"" >> $GITHUB_STEP_SUMMARY
+              echo "ecs_container_image_tag            = \"${service}-latest\"" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            done
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           elif [ "${{ needs.build-and-push.result }}" == "failure" ]; then
             echo "Some microservices failed to build. Check the logs above." >> $GITHUB_STEP_SUMMARY
           else

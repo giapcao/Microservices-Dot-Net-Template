@@ -1,86 +1,120 @@
-using Microsoft.OpenApi.Models;
 using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
+using System.Collections;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
 DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
-var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? builder.Environment.EnvironmentName;
-var ocelotConfigPath = Path.Combine(builder.Environment.ContentRootPath, $"ocelot.{env}.json");
 
-// Read and store the original JSON file content in memory
-var originalJsonContent = File.ReadAllText(ocelotConfigPath);
+// Helper accessors with defaults
+string GetEnv(string key, string def) => Environment.GetEnvironmentVariable(key) ?? def;
+int GetEnvInt(string key, int def) => int.TryParse(Environment.GetEnvironmentVariable(key), out var v) ? v : def;
 
-// Parse and modify the JSON content
-var jsonObject = JsonNode.Parse(originalJsonContent);
+// Build Ocelot configuration dynamically from environment variables
+var routes = new JsonArray();
 
-if (jsonObject != null)
+// Helper to convert ENV prefix (e.g., USER, ORDER_HISTORY) into path segment (User, OrderHistory)
+string ToServiceSegment(string prefix)
 {
-    var routes = jsonObject["Routes"];
-    if (routes is JsonArray)
-    {
-        foreach (var route in routes.AsArray())
-        {
-            if (route["DownstreamHostAndPorts"] is JsonArray downstreams)
-            {
-                foreach (var downstream in downstreams)
-                {
-                    // Handle 'Host'
-                    if (downstream["Host"] is JsonValue hostValue)
-                    {
-                        var host = hostValue.GetValue<string>();
-                        if (host.StartsWith("{") && host.EndsWith("}"))
-                        {
-                            var envVar = host.Trim('{', '}');
-                            downstream["Host"] = Environment.GetEnvironmentVariable(envVar) ?? host;
-                        }
-                    }
-
-                    // Handle 'Port' (can be number or string)
-                    if (downstream["Port"] is JsonValue portValue)
-                    {
-                        if (portValue.TryGetValue(out int portInt)) // Port as integer
-                        {
-                            var envVar = Environment.GetEnvironmentVariable($"PORT_{portInt}");
-                            if (envVar != null && int.TryParse(envVar, out int newPort))
-                            {
-                                downstream["Port"] = newPort;
-                            }
-                        }
-                        else if (portValue.TryGetValue(out string portString)) // Port as string
-                        {
-                            if (portString.StartsWith("{") && portString.EndsWith("}"))
-                            {
-                                var envVar = portString.Trim('{', '}');
-                                downstream["Port"] = int.Parse(Environment.GetEnvironmentVariable(envVar) ?? portString);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Save the modified JSON back to the file
-    File.WriteAllText(ocelotConfigPath, jsonObject.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+    var lower = prefix.ToLowerInvariant();
+    var parts = lower.Split(new[] { '_', '-' }, StringSplitOptions.RemoveEmptyEntries);
+    return string.Concat(parts.Select(p => char.ToUpperInvariant(p[0]) + p.Substring(1)));
 }
 
-builder.Configuration.SetBasePath(builder.Environment.ContentRootPath)
-    .AddJsonFile($"ocelot.{env}.json", optional: true, reloadOnChange: true)
+void AddRoute(string serviceSegment, string host, int port)
+{
+    routes.Add(new JsonObject
+    {
+        ["UpstreamPathTemplate"] = $"/api/{serviceSegment}/{{everything}}",
+        ["UpstreamHttpMethod"] = new JsonArray("Get", "Post", "Put", "Delete"),
+        ["DownstreamScheme"] = "http",
+        ["DownstreamHostAndPorts"] = new JsonArray(new JsonObject
+        {
+            ["Host"] = host,
+            ["Port"] = port
+        }),
+        ["DownstreamPathTemplate"] = $"/api/{serviceSegment}/{{everything}}"
+    });
+}
+
+// Defaults when ENV is not provided
+var defaultServices = new[]
+{
+    new { Prefix = "USER", Service = "User", Host = "user-microservice", Port = 5002 },
+    new { Prefix = "GUEST", Service = "Guest", Host = "guest-microservice", Port = 5001 }
+};
+
+// Track added services to prevent duplicates
+var addedServices = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+// 1) Add defaults first (can be overridden by ENV later)
+foreach (var s in defaultServices)
+{
+    var envHost = Environment.GetEnvironmentVariable($"{s.Prefix}_MICROSERVICE_HOST");
+    var envPortStr = Environment.GetEnvironmentVariable($"{s.Prefix}_MICROSERVICE_PORT");
+    var host = string.IsNullOrWhiteSpace(envHost) ? s.Host : envHost;
+    var port = int.TryParse(envPortStr, out var p) ? p : s.Port;
+    AddRoute(s.Service, host, port);
+    addedServices.Add(s.Service);
+}
+
+// 2) Discover any additional services from ENV
+var envVars = Environment.GetEnvironmentVariables();
+var prefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+foreach (DictionaryEntry entry in envVars)
+{
+    var key = entry.Key?.ToString();
+    if (string.IsNullOrEmpty(key)) continue;
+    if (key.EndsWith("_MICROSERVICE_HOST", StringComparison.OrdinalIgnoreCase))
+    {
+        prefixes.Add(key[..^"_MICROSERVICE_HOST".Length]);
+    }
+    else if (key.EndsWith("_MICROSERVICE_PORT", StringComparison.OrdinalIgnoreCase))
+    {
+        prefixes.Add(key[..^"_MICROSERVICE_PORT".Length]);
+    }
+}
+
+foreach (var prefix in prefixes)
+{
+    var serviceSegment = ToServiceSegment(prefix);
+    if (addedServices.Contains(serviceSegment))
+    {
+        // Already added via defaults above; defaults already considered ENV override.
+        continue;
+    }
+
+    var host = GetEnv($"{prefix}_MICROSERVICE_HOST", $"{prefix.ToLowerInvariant()}-microservice");
+    var port = GetEnvInt($"{prefix}_MICROSERVICE_PORT", 80);
+    AddRoute(serviceSegment, host, port);
+    addedServices.Add(serviceSegment);
+}
+
+var ocelotConfig = new JsonObject
+{
+    ["Routes"] = routes,
+    ["GlobalConfiguration"] = new JsonObject
+    {
+        ["BaseUrl"] = GetEnv("BASE_URL", "http://localhost:2406")
+    }
+};
+
+// Persist generated config to a runtime file and load it
+var runtimeConfigPath = Path.Combine(builder.Environment.ContentRootPath, "ocelot.runtime.json");
+File.WriteAllText(runtimeConfigPath, ocelotConfig.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+
+builder.Configuration
+    .SetBasePath(builder.Environment.ContentRootPath)
+    .AddJsonFile(runtimeConfigPath, optional: false, reloadOnChange: true)
     .AddEnvironmentVariables();
 
 builder.Services.AddOcelot(builder.Configuration);
 
 var app = builder.Build();
-
-// Restore the original JSON content during application shutdown
-var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
-lifetime.ApplicationStopping.Register(() =>
-{
-    File.WriteAllText(ocelotConfigPath, originalJsonContent);
-});
 
 await app.UseOcelot();
 app.Run();

@@ -13,6 +13,27 @@ variable "vpc_id" {
   type        = string
 }
 
+variable "vpc_cidr" {
+  description = "CIDR block of the VPC, used for SG ingress rules"
+  type        = string
+}
+
+variable "task_subnet_ids" {
+  description = "Subnets where ECS tasks (awsvpc ENIs) will be placed"
+  type        = list(string)
+}
+
+variable "alb_security_group_id" {
+  description = "Security group ID of the ALB to allow inbound traffic from"
+  type        = string
+}
+
+variable "assign_public_ip" {
+  description = "Assign public IPs to task ENIs (typically true in public subnets)"
+  type        = bool
+  default     = true
+}
+
 variable "ecs_cluster_id" {
   description = "Cluster ID, passed from the EC2 module"
   type        = string
@@ -42,6 +63,7 @@ variable "containers" {
     cpu                  = number # CPU units for this container
     memory               = number # Memory (MiB) for this container
     essential            = optional(bool, true)
+    command              = optional(list(string))
     port_mappings = list(object({
       container_port = number
       host_port      = optional(number, 0) # 0 for dynamic host port assignment

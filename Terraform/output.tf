@@ -1,18 +1,4 @@
-# output "cloudfront_distribution_id" {
-#   description = "The ID of the CloudFront distribution"
-#   value       = module.cloudfront.cloudfront_distribution_id
-# }
-
-# output "cloudfront_domain_name" {
-#   description = "The domain name of the CloudFront distribution"
-#   value       = module.cloudfront.cloudfront_domain_name
-# }
-
-# output "cloudfront_private_key_pem" {
-#   description = "Private key for CloudFront signed URLs/cookies."
-#   value       = module.cloudfront.cloudfront_private_key_pem
-#   sensitive   = true
-# }
+## Removed CloudFront outputs
 
 
 
@@ -79,23 +65,4 @@ output "ec2_private_key_pem" {
   sensitive   = true
 }
 
-# ECS Service Outputs
-# output "ecs_service_name" {
-#   description = "Name of the ECS service"
-#   value       = module.ecs.ecs_service_name
-# }
-
-# output "ecs_service_arn" {
-#   description = "ARN of the ECS service"
-#   value       = module.ecs.ecs_service_arn
-# }
-
-# output "task_definition_arn" {
-#   description = "ARN of the task definition"
-#   value       = module.ecs.task_definition_arn
-# }
-
-# output "cloudwatch_log_group_name" {
-#   description = "Name of the CloudWatch log group for ECS logs"
-#   value       = module.ecs.cloudwatch_log_group_name
-# }
+## Optional ECS outputs commented out (kept minimal)

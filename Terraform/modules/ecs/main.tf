@@ -59,9 +59,39 @@ resource "aws_iam_role_policy_attachment" "ecs_task_ecr_pull" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
+resource "aws_security_group" "task_sg" {
+  name_prefix = "${var.project_name}-ecs-task-sg-"
+  description = "Security group for ECS tasks (awsvpc)"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    description = "Allow inbound from ALB"
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    security_groups = [var.alb_security_group_id]
+  }
+
+  ingress {
+    description = "Allow intra-VPC task-to-task"
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+  }
+
+  egress {
+    description = "All outbound"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
 resource "aws_ecs_task_definition" "app_task" {
   family                   = "${var.project_name}-task"
-  network_mode             = "bridge" # Bridge mode for EC2 launch type with multiple containers on same host
+  network_mode             = "awsvpc"
   requires_compatibilities = ["EC2"]
   cpu                      = tostring(var.task_cpu)
   memory                   = tostring(var.task_memory)
@@ -70,45 +100,51 @@ resource "aws_ecs_task_definition" "app_task" {
   execution_role_arn = aws_iam_role.ecs_execution_role.arn
 
   container_definitions = jsonencode([
-    for c in var.containers : {
-      name      = c.name
-      image     = "${c.image_repository_url}:${c.image_tag}"
-      cpu       = c.cpu
-      memory    = c.memory
-      essential = c.essential
+    for c in var.containers : merge(
+      {
+        name      = c.name
+        image     = "${c.image_repository_url}:${c.image_tag}"
+        cpu       = c.cpu
+        memory    = c.memory
+        essential = c.essential
 
-      portMappings = [
-        for pm in c.port_mappings : {
-          containerPort = pm.container_port
-          hostPort      = pm.host_port      # Typically 0 for dynamic port mapping in bridge mode
-          protocol      = pm.protocol
+        portMappings = [
+          for pm in c.port_mappings : {
+            containerPort = pm.container_port
+            hostPort      = pm.container_port
+            protocol      = pm.protocol
+          }
+        ]
+
+        environment = [
+          for env_var in c.environment_variables : {
+            name  = env_var.name
+            value = env_var.value
+          }
+        ]
+
+        logConfiguration = {
+          logDriver = "awslogs"
+          options = {
+            awslogs-group         = aws_cloudwatch_log_group.ecs_logs.name
+            awslogs-region        = var.aws_region
+            awslogs-stream-prefix = "ecs/${c.name}"
+          }
         }
-      ]
-
-      environment = [
-        for env_var in c.environment_variables : {
-          name  = env_var.name
-          value = env_var.value
+      },
+      c.command != null ? {
+        command = c.command
+      } : {},
+      c.health_check != null ? {
+        healthCheck = {
+          command     = c.health_check.command
+          interval    = c.health_check.interval
+          timeout     = c.health_check.timeout
+          retries     = c.health_check.retries
+          startPeriod = c.health_check.startPeriod
         }
-      ]
-
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          awslogs-group         = aws_cloudwatch_log_group.ecs_logs.name
-          awslogs-region        = var.aws_region
-          awslogs-stream-prefix = "ecs/${c.name}" # Differentiates logs by container name
-        }
-      }
-
-      healthCheck = c.health_check != null ? {
-        command     = c.health_check.command
-        interval    = c.health_check.interval
-        timeout     = c.health_check.timeout
-        retries     = c.health_check.retries
-        startPeriod = c.health_check.startPeriod
-      } : null
-    }
+      } : {}
+    )
   ])
 
   tags = { Name = "${var.project_name}-task-definition" }
@@ -120,6 +156,12 @@ resource "aws_ecs_service" "app_service" {
   task_definition = aws_ecs_task_definition.app_task.arn
   desired_count   = var.desired_count
   launch_type     = "EC2"
+
+  network_configuration {
+    assign_public_ip = var.assign_public_ip
+    subnets          = var.task_subnet_ids
+    security_groups  = [aws_security_group.task_sg.id]
+  }
 
   ordered_placement_strategy {
     type  = "spread"
@@ -187,7 +229,7 @@ resource "aws_service_discovery_service" "discovery_services" {
     routing_policy = "MULTIVALUE" # Appropriate for SRV records, resolves to multiple task IPs/ports
     dns_records {
       ttl  = 10
-      type = "SRV" # SRV records for discovering specific host:port combinations
+      type = "A" # Use A records so standard clients resolve service names
     }
   }
 
@@ -238,4 +280,15 @@ resource "aws_appautoscaling_policy" "ecs_memory_policy" {
     scale_in_cooldown  = 300 # Optional: Cooldown period in seconds
     scale_out_cooldown = 60  # Optional: Cooldown period in seconds
   }
+}
+
+# Allow all traffic within the same task security group (container-to-container across tasks)
+resource "aws_security_group_rule" "task_sg_intra_self" {
+  type              = "ingress"
+  description       = "Allow all traffic within ECS task SG"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  security_group_id = aws_security_group.task_sg.id
+  self              = true
 }

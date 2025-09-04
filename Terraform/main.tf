@@ -49,16 +49,29 @@ module "alb" {
         healthy_threshold   = var.services["user"].alb_health_check.healthy_threshold
         unhealthy_threshold = var.services["user"].alb_health_check.unhealthy_threshold
       }
+    },
+    { # API Gateway Target Group
+      name_suffix = "apigateway"
+      port        = var.services["apigateway"].alb_target_group_port
+      protocol    = var.services["apigateway"].alb_target_group_protocol
+      target_type = var.services["apigateway"].alb_target_group_type
+      health_check = {
+        enabled             = var.services["apigateway"].alb_health_check.enabled
+        path                = var.services["apigateway"].alb_health_check.path
+        port                = var.services["apigateway"].alb_health_check.port
+        protocol            = var.services["apigateway"].alb_health_check.protocol
+        matcher             = var.services["apigateway"].alb_health_check.matcher
+        interval            = var.services["apigateway"].alb_health_check.interval
+        timeout             = var.services["apigateway"].alb_health_check.timeout
+        healthy_threshold   = var.services["apigateway"].alb_health_check.healthy_threshold
+        unhealthy_threshold = var.services["apigateway"].alb_health_check.unhealthy_threshold
+      }
     }
   ]
 
   default_listener_action = {
-    type = "fixed-response"
-    fixed_response = {
-      content_type = "text/plain"
-      message_body = "Error: Path not found."
-      status_code  = "404"
-    }
+    type = "forward"
+    target_group_suffix = "apigateway"
   }
 
   listener_rules_definition = [
@@ -96,16 +109,20 @@ module "ecs" {
   project_name     = var.project_name
   aws_region       = var.aws_region
   vpc_id           = module.vpc.vpc_id
+  vpc_cidr         = var.vpc_cidr
+  task_subnet_ids  = module.vpc.public_subnet_ids
   ecs_cluster_id   = module.ec2.ecs_cluster_arn
   ecs_cluster_name = module.ec2.ecs_cluster_name
   desired_count    = 1
 
-  task_cpu    = 825
-  task_memory = 825
+  task_cpu    = 1000
+  task_memory = 1000
+  alb_security_group_id = module.alb.alb_sg_id
+  assign_public_ip      = true
 
   containers = [
     { # Guest Container Definition
-      name                 = "${var.project_name}-guest-${var.services["guest"].ecs_container_name_suffix}"
+      name                 = "guest-microservice"
       image_repository_url = var.services["guest"].ecs_container_image_repository_url
       image_tag            = var.services["guest"].ecs_container_image_tag
       cpu                  = var.services["guest"].ecs_container_cpu
@@ -124,7 +141,7 @@ module "ecs" {
       service_discovery_port   = var.services["guest"].ecs_service_discovery_port
     },
     { # User Container Definition
-      name                 = "${var.project_name}-user-${var.services["user"].ecs_container_name_suffix}"
+      name                 = "user-microservice"
       image_repository_url = var.services["user"].ecs_container_image_repository_url
       image_tag            = var.services["user"].ecs_container_image_tag
       cpu                  = var.services["user"].ecs_container_cpu
@@ -141,19 +158,70 @@ module "ecs" {
       }
       enable_service_discovery = var.enable_service_discovery # Uses the global variable
       service_discovery_port   = var.services["user"].ecs_service_discovery_port
+    },
+    { # API Gateway
+      name                 = "apigateway"
+      image_repository_url = var.services["apigateway"].ecs_container_image_repository_url
+      image_tag            = var.services["apigateway"].ecs_container_image_tag
+      cpu                  = var.services["apigateway"].ecs_container_cpu
+      memory               = var.services["apigateway"].ecs_container_memory
+      essential            = var.services["apigateway"].ecs_container_essential
+      port_mappings        = var.services["apigateway"].ecs_container_port_mappings
+      environment_variables= var.services["apigateway"].ecs_environment_variables
+      health_check = {
+        command     = var.services["apigateway"].ecs_container_health_check.command
+        interval    = var.services["apigateway"].ecs_container_health_check.interval
+        timeout     = var.services["apigateway"].ecs_container_health_check.timeout
+        retries     = var.services["apigateway"].ecs_container_health_check.retries
+        startPeriod = var.services["apigateway"].ecs_container_health_check.startPeriod
+      }
+      enable_service_discovery = var.enable_service_discovery
+      service_discovery_port   = var.services["apigateway"].ecs_service_discovery_port
+    },
+    { # Redis
+      name                 = "redis"
+      image_repository_url = var.services["redis"].ecs_container_image_repository_url
+      image_tag            = var.services["redis"].ecs_container_image_tag
+      cpu                  = var.services["redis"].ecs_container_cpu
+      memory               = var.services["redis"].ecs_container_memory
+      essential            = var.services["redis"].ecs_container_essential
+      port_mappings        = var.services["redis"].ecs_container_port_mappings
+      environment_variables= var.services["redis"].ecs_environment_variables
+      command              = lookup(var.services["redis"], "command", null)
+      health_check         = null
+      enable_service_discovery = var.enable_service_discovery
+      service_discovery_port   = var.services["redis"].ecs_service_discovery_port
+    },
+    { # RabbitMQ
+      name                 = "rabbit-mq"
+      image_repository_url = var.services["rabbitmq"].ecs_container_image_repository_url
+      image_tag            = var.services["rabbitmq"].ecs_container_image_tag
+      cpu                  = var.services["rabbitmq"].ecs_container_cpu
+      memory               = var.services["rabbitmq"].ecs_container_memory
+      essential            = var.services["rabbitmq"].ecs_container_essential
+      port_mappings        = var.services["rabbitmq"].ecs_container_port_mappings
+      environment_variables= var.services["rabbitmq"].ecs_environment_variables
+      health_check         = null
+      enable_service_discovery = var.enable_service_discovery
+      service_discovery_port   = var.services["rabbitmq"].ecs_service_discovery_port
     }
   ]
 
   target_groups = [
     { # Guest Service to Target Group Mapping
       target_group_arn = module.alb.target_group_arns_map["guest"]
-      container_name   = "${var.project_name}-guest-${var.services["guest"].ecs_container_name_suffix}"
+      container_name   = "guest-microservice"
       container_port   = var.services["guest"].ecs_container_port_mappings[0].container_port # Assumes first port mapping
     },
     { # User Service to Target Group Mapping
       target_group_arn = module.alb.target_group_arns_map["user"]
-      container_name   = "${var.project_name}-user-${var.services["user"].ecs_container_name_suffix}"
+      container_name   = "user-microservice"
       container_port   = var.services["user"].ecs_container_port_mappings[0].container_port # Assumes first port mapping
+    },
+    { # API Gateway to Target Group Mapping
+      target_group_arn = module.alb.target_group_arns_map["apigateway"]
+      container_name   = "apigateway"
+      container_port   = var.services["apigateway"].ecs_container_port_mappings[0].container_port
     }
   ]
 
@@ -163,15 +231,4 @@ module "ecs" {
   depends_on = [module.ec2]
 }
 
-# module "lambda_edge" {
-#   source = "./modules/lambda_edge"
-# }
-
-# module "cloudfront" {
-#   source                = "./modules/cloudfront"
-#   project_name          = var.project_name
-#   origin_domain_name    = var.origin_domain_name
-#   origin_path           = var.origin_path
-#   set_cookie_lambda_arn = module.lambda_edge.lambda_function_qualified_arn
-#   bucket_secret_referer = var.bucket_secret_referer
-# }
+## CloudFront and Lambda@Edge modules removed

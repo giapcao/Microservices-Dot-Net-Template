@@ -162,14 +162,14 @@ variable "services" {
         { name = "DATABASE_USERNAME", value = "avnadmin" },
         { name = "DATABASE_PASSWORD", value = "AVNS_iGi4kJJObNRnGdM6BTb" },
         { name = "ASPNETCORE_URLS", value = "http://0.0.0.0:5001" },
-        { name = "RABBITMQ_HOST", value = "rabbit-mq.projectname.local" },
+        { name = "RABBITMQ_HOST", value = "localhost" },
         { name = "RABBITMQ_PORT", value = "5672" },
         { name = "RABBITMQ_USERNAME", value = "rabbitmq" },
         { name = "RABBITMQ_PASSWORD", value = "0Kg04Rq08!" },
-        { name = "REDIS_HOST", value = "redis.projectname.local" },
+        { name = "REDIS_HOST", value = "localhost" },
         { name = "REDIS_PASSWORD", value = "0Kg04Rs05!" },
         { name = "REDIS_PORT", value = "6379" },
-        { name = "USER_MICROSERVICE_HOST", value = "user-microservice.projectname.local" },
+        { name = "USER_MICROSERVICE_HOST", value = "localhost" },
         { name = "USER_MICROSERVICE_PORT", value = "5002" }
       ]
       ecs_container_health_check = {
@@ -225,14 +225,14 @@ variable "services" {
         { name = "DATABASE_USERNAME", value = "avnadmin" },
         { name = "DATABASE_PASSWORD", value = "AVNS_vsIotPLRrxJUhcJlM0m" },
         { name = "ASPNETCORE_URLS", value = "http://0.0.0.0:5002" },
-        { name = "RABBITMQ_HOST", value = "rabbit-mq.projectname.local" },
+        { name = "RABBITMQ_HOST", value = "localhost" },
         { name = "RABBITMQ_PORT", value = "5672" },
         { name = "RABBITMQ_USERNAME", value = "rabbitmq" },
         { name = "RABBITMQ_PASSWORD", value = "0Kg04Rq08!" },
-        { name = "REDIS_HOST", value = "redis.projectname.local" },
+        { name = "REDIS_HOST", value = "localhost" },
         { name = "REDIS_PASSWORD", value = "0Kg04Rs05!" },
         { name = "REDIS_PORT", value = "6379" },
-        { name = "GUEST_MICROSERVICE_HOST", value = "guest-microservice.projectname.local" },
+        { name = "GUEST_MICROSERVICE_HOST", value = "localhost" },
         { name = "GUEST_MICROSERVICE_PORT", value = "5001" }
       ]
       ecs_container_health_check = {
@@ -277,14 +277,14 @@ variable "services" {
       ecs_environment_variables = [
         { name = "ASPNETCORE_ENVIRONMENT", value = "Production" },
         { name = "ASPNETCORE_URLS", value = "http://0.0.0.0:8080" },
-        { name = "USER_MICROSERVICE_HOST", value = "user-microservice.projectname.local" },
+        { name = "USER_MICROSERVICE_HOST", value = "localhost" },
         { name = "USER_MICROSERVICE_PORT", value = "5002" },
-        { name = "GUEST_MICROSERVICE_HOST", value = "guest-microservice.projectname.local" },
+        { name = "GUEST_MICROSERVICE_HOST", value = "localhost" },
         { name = "GUEST_MICROSERVICE_PORT", value = "5001" },
         { name = "BASE_URL", value = "http://apigateway.projectname.local:8080" },
-        { name = "RABBITMQ_HOST", value = "rabbit-mq.projectname.local" },
+        { name = "RABBITMQ_HOST", value = "localhost" },
         { name = "RABBITMQ_PORT", value = "5672" },
-        { name = "REDIS_HOST", value = "redis.projectname.local" },
+        { name = "REDIS_HOST", value = "localhost" },
         { name = "REDIS_PORT", value = "6379" }
       ]
       ecs_container_health_check = {

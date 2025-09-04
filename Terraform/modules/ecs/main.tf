@@ -168,16 +168,7 @@ resource "aws_ecs_service" "app_service" {
     field = "attribute:ecs.instance-id" # Spread tasks across instances
   }
 
-  dynamic "service_registries" {
-    # ECS only supports a single service_registries block per service. Pick the first eligible container (if any).
-    for_each = var.enable_service_discovery && length(keys(aws_service_discovery_service.discovery_services)) > 0 ? {
-      for cn in [keys(aws_service_discovery_service.discovery_services)[0]] : cn => cn
-    } : {}
-    content {
-      registry_arn   = aws_service_discovery_service.discovery_services[service_registries.key].arn
-      port           = lookup({ for c in var.containers : c.name => lookup(c, "service_discovery_port", null) }, service_registries.key, null)
-    }
-  }
+  # Service discovery disabled by default for single-task, multi-container setup using localhost
 
   dynamic "load_balancer" {
     for_each = var.target_groups # Iterate through the list of target group configurations

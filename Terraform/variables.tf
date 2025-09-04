@@ -60,7 +60,7 @@ variable "enable_auto_scaling" {
 variable "enable_service_discovery" {
   description = "Enable service discovery for ECS services"
   type        = bool
-  default     = true
+  default     = false
 }
 
 # Service Definitions Variable

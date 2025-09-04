@@ -250,7 +250,7 @@ variable "services" {
       alb_target_group_type     = "ip"
       alb_health_check = {
         enabled             = true
-        path                = "/health"
+        path                = "/api/health"
         port                = "traffic-port"
         protocol            = "HTTP"
         matcher             = "200"
@@ -288,7 +288,7 @@ variable "services" {
         { name = "REDIS_PORT", value = "6379" }
       ]
       ecs_container_health_check = {
-        command     = ["CMD-SHELL", "curl -f http://localhost:8080/ || exit 1"]
+        command     = ["CMD-SHELL", "curl -f http://localhost:8080/api/health || exit 1"]
         interval    = 30
         timeout     = 5
         retries     = 3

@@ -16,48 +16,14 @@ module "alb" {
   public_subnet_ids   = module.vpc.public_subnet_ids
 
   target_groups_definition = [
-    { # Guest Service Target Group
-      name_suffix = "guest" # This should match the key in var.services
-      port        = var.services["guest"].alb_target_group_port
-      protocol    = var.services["guest"].alb_target_group_protocol
-      target_type = var.services["guest"].alb_target_group_type
-      health_check = {
-        enabled             = var.services["guest"].alb_health_check.enabled
-        path                = var.services["guest"].alb_health_check.path
-        port                = var.services["guest"].alb_health_check.port
-        protocol            = var.services["guest"].alb_health_check.protocol
-        matcher             = var.services["guest"].alb_health_check.matcher
-        interval            = var.services["guest"].alb_health_check.interval
-        timeout             = var.services["guest"].alb_health_check.timeout
-        healthy_threshold   = var.services["guest"].alb_health_check.healthy_threshold
-        unhealthy_threshold = var.services["guest"].alb_health_check.unhealthy_threshold
-      }
-    },
-    { # User Service Target Group
-      name_suffix = "user" # This should match the key in var.services
-      port        = var.services["user"].alb_target_group_port
-      protocol    = var.services["user"].alb_target_group_protocol
-      target_type = var.services["user"].alb_target_group_type
-      health_check = {
-        enabled             = var.services["user"].alb_health_check.enabled
-        path                = var.services["user"].alb_health_check.path
-        port                = var.services["user"].alb_health_check.port
-        protocol            = var.services["user"].alb_health_check.protocol
-        matcher             = var.services["user"].alb_health_check.matcher
-        interval            = var.services["user"].alb_health_check.interval
-        timeout             = var.services["user"].alb_health_check.timeout
-        healthy_threshold   = var.services["user"].alb_health_check.healthy_threshold
-        unhealthy_threshold = var.services["user"].alb_health_check.unhealthy_threshold
-      }
-    },
     { # API Gateway Target Group
       name_suffix = "apigateway"
       port        = var.services["apigateway"].alb_target_group_port
       protocol    = var.services["apigateway"].alb_target_group_protocol
       target_type = var.services["apigateway"].alb_target_group_type
       health_check = {
-        enabled             = var.services["apigateway"].alb_health_check.enabled
-        path                = var.services["apigateway"].alb_health_check.path
+        enabled             = true
+        path                = "/api/health"
         port                = var.services["apigateway"].alb_health_check.port
         protocol            = var.services["apigateway"].alb_health_check.protocol
         matcher             = var.services["apigateway"].alb_health_check.matcher
@@ -74,18 +40,7 @@ module "alb" {
     target_group_suffix = "apigateway"
   }
 
-  listener_rules_definition = [
-    { 
-      priority            = var.services["guest"].alb_listener_rule_priority
-      target_group_suffix = "guest"
-      conditions          = var.services["guest"].alb_listener_rule_conditions
-    },
-    { 
-      priority            = var.services["user"].alb_listener_rule_priority
-      target_group_suffix = "user"
-      conditions          = var.services["user"].alb_listener_rule_conditions
-    }
-  ]
+  listener_rules_definition = []
 }
 
 # EC2 Module
@@ -208,16 +163,6 @@ module "ecs" {
   ]
 
   target_groups = [
-    { # Guest Service to Target Group Mapping
-      target_group_arn = module.alb.target_group_arns_map["guest"]
-      container_name   = "guest-microservice"
-      container_port   = var.services["guest"].ecs_container_port_mappings[0].container_port # Assumes first port mapping
-    },
-    { # User Service to Target Group Mapping
-      target_group_arn = module.alb.target_group_arns_map["user"]
-      container_name   = "user-microservice"
-      container_port   = var.services["user"].ecs_container_port_mappings[0].container_port # Assumes first port mapping
-    },
     { # API Gateway to Target Group Mapping
       target_group_arn = module.alb.target_group_arns_map["apigateway"]
       container_name   = "apigateway"

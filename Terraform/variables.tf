@@ -144,8 +144,8 @@ variable "services" {
       ecs_container_name_suffix          = "microservice"
       ecs_container_image_repository_url = "897279497116.dkr.ecr.us-east-1.amazonaws.com/vkev-infrastructure-khanghv2406-ecr"
       ecs_container_image_tag            = "Guest.Microservice-latest"
-      ecs_container_cpu                  = 200
-      ecs_container_memory               = 200
+      ecs_container_cpu                  = 128
+      ecs_container_memory               = 128
       ecs_container_essential            = true
       ecs_container_port_mappings = [
         {
@@ -207,8 +207,8 @@ variable "services" {
       ecs_container_name_suffix          = "microservice"
       ecs_container_image_repository_url = "897279497116.dkr.ecr.us-east-1.amazonaws.com/vkev-infrastructure-khanghv2406-ecr"
       ecs_container_image_tag            = "User.Microservice-latest"
-      ecs_container_cpu                  = 200
-      ecs_container_memory               = 200
+      ecs_container_cpu                  = 128
+      ecs_container_memory               = 128
       ecs_container_essential            = true
       ecs_container_port_mappings = [
         {
@@ -264,8 +264,8 @@ variable "services" {
       ecs_container_name_suffix          = "apigateway"
       ecs_container_image_repository_url = "897279497116.dkr.ecr.us-east-1.amazonaws.com/vkev-infrastructure-khanghv2406-ecr"
       ecs_container_image_tag            = "ApiGateway-latest"
-      ecs_container_cpu                  = 200
-      ecs_container_memory               = 200
+      ecs_container_cpu                  = 128
+      ecs_container_memory               = 128
       ecs_container_essential            = true
       ecs_container_port_mappings = [
         {
@@ -316,8 +316,8 @@ variable "services" {
       ecs_container_name_suffix          = "redis"
       ecs_container_image_repository_url = "redis"
       ecs_container_image_tag            = "alpine"
-      ecs_container_cpu                  = 200
-      ecs_container_memory               = 200
+      ecs_container_cpu                  = 128
+      ecs_container_memory               = 128
       ecs_container_essential            = true
       ecs_container_port_mappings = [
         {

@@ -175,7 +175,6 @@ resource "aws_ecs_service" "app_service" {
     } : {}
     content {
       registry_arn   = aws_service_discovery_service.discovery_services[service_registries.key].arn
-      container_name = service_registries.key
       port           = lookup({ for c in var.containers : c.name => lookup(c, "service_discovery_port", null) }, service_registries.key, null)
     }
   }

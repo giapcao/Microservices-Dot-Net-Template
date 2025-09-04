@@ -72,6 +72,10 @@ jobs:
         working-directory: Terraform
         run: terraform validate
 
+      - name: Terraform format (auto-fix)
+        working-directory: Terraform
+        run: terraform fmt -recursive
+
       - name: Format check
         working-directory: Terraform
         run: terraform fmt -check -recursive

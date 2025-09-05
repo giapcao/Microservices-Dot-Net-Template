@@ -116,9 +116,20 @@ builder.Services.AddOcelot(builder.Configuration);
 
 var app = builder.Build();
 
-// Health endpoint for ALB
-app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
-app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+// Short-circuit health endpoints BEFORE Ocelot so they don't go through Ocelot pipeline
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path.Value;
+    if (string.Equals(path, "/health", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/api/health", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsync(JsonSerializer.Serialize(new { status = "ok" }));
+        return;
+    }
+
+    await next();
+});
 
 await app.UseOcelot();
 app.Run();

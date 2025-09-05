@@ -1,3 +1,7 @@
+terraform {
+  experiments = [module_variable_optional_attrs]
+}
+
 ## Removed CloudFront/Wasabi related variables
 
 variable "region" {
@@ -108,6 +112,7 @@ variable "services" {
       name  = string
       value = string
     }))
+    command = optional(list(string)) # Container command override
     ecs_container_health_check = optional(object({
       command     = list(string)
       interval    = number

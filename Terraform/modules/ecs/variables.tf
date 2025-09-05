@@ -1,3 +1,7 @@
+terraform {
+  experiments = [module_variable_optional_attrs]
+}
+
 variable "project_name" {
   description = "Prefix for all ECS-related resources"
   type        = string

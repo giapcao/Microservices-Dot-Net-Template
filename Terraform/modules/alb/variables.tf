@@ -1,3 +1,7 @@
+terraform {
+  experiments = [module_variable_optional_attrs]
+}
+
 variable "project_name" {
   description = "A prefix used for naming resources to ensure uniqueness and grouping."
   type        = string

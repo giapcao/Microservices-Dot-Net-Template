@@ -65,7 +65,7 @@ module "ecs" {
   aws_region       = var.aws_region
   vpc_id           = module.vpc.vpc_id
   vpc_cidr         = var.vpc_cidr
-  task_subnet_ids  = module.vpc.public_subnet_ids
+  task_subnet_ids  = [module.vpc.private_subnet_id]
   ecs_cluster_id   = module.ec2.ecs_cluster_arn
   ecs_cluster_name = module.ec2.ecs_cluster_name
   desired_count    = 1
@@ -73,7 +73,7 @@ module "ecs" {
   task_cpu    = 800
   task_memory = 800
   alb_security_group_id = module.alb.alb_sg_id
-  assign_public_ip      = true
+  assign_public_ip      = false
 
   containers = [
     { # Guest Container Definition

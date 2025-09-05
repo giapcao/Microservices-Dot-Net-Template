@@ -143,7 +143,7 @@ variable "services" {
         }
       ]
       ecs_container_name_suffix          = "microservice"
-      ecs_container_image_repository_url = "897279497116.dkr.ecr.us-east-1.amazonaws.com/vkev-infrastructure-khanghv2406-ecr"
+      ecs_container_image_repository_url = "your-account-id.dkr.ecr.us-east-1.amazonaws.com/your-ecr-repo"
       ecs_container_image_tag            = "Guest.Microservice-latest"
       ecs_container_cpu                  = 100
       ecs_container_memory               = 128
@@ -157,18 +157,18 @@ variable "services" {
       ]
       ecs_environment_variables = [
         { name = "ASPNETCORE_ENVIRONMENT", value = "Production" },
-        { name = "DATABASE_HOST", value = "pg-1-database25811.g.aivencloud.com" },
-        { name = "DATABASE_PORT", value = "16026" },
+        { name = "DATABASE_HOST", value = "your-database-host.com" },
+        { name = "DATABASE_PORT", value = "5432" },
         { name = "DATABASE_NAME", value = "defaultdb" },
-        { name = "DATABASE_USERNAME", value = "avnadmin" },
-        { name = "DATABASE_PASSWORD", value = "AVNS_iGi4kJJObNRnGdM6BTb" },
+        { name = "DATABASE_USERNAME", value = "dbuser" },
+        { name = "DATABASE_PASSWORD", value = "change-me-db-password" },
         { name = "ASPNETCORE_URLS", value = "http://0.0.0.0:5001" },
         { name = "RABBITMQ_HOST", value = "localhost" },
         { name = "RABBITMQ_PORT", value = "5672" },
         { name = "RABBITMQ_USERNAME", value = "rabbitmq" },
-        { name = "RABBITMQ_PASSWORD", value = "0Kg04Rq08!" },
+        { name = "RABBITMQ_PASSWORD", value = "change-me-rabbitmq-password" },
         { name = "REDIS_HOST", value = "localhost" },
-        { name = "REDIS_PASSWORD", value = "0Kg04Rs05!" },
+        { name = "REDIS_PASSWORD", value = "change-me-redis-password" },
         { name = "REDIS_PORT", value = "6379" },
         { name = "USER_MICROSERVICE_HOST", value = "localhost" },
         { name = "USER_MICROSERVICE_PORT", value = "5002" }
@@ -207,7 +207,7 @@ variable "services" {
         }
       ]
       ecs_container_name_suffix          = "microservice"
-      ecs_container_image_repository_url = "897279497116.dkr.ecr.us-east-1.amazonaws.com/vkev-infrastructure-khanghv2406-ecr"
+      ecs_container_image_repository_url = "your-account-id.dkr.ecr.us-east-1.amazonaws.com/your-ecr-repo"
       ecs_container_image_tag            = "User.Microservice-latest"
       ecs_container_cpu                  = 100
       ecs_container_memory               = 128
@@ -221,18 +221,18 @@ variable "services" {
       ]
       ecs_environment_variables = [
         { name = "ASPNETCORE_ENVIRONMENT", value = "Production" },
-        { name = "DATABASE_HOST", value = "pg-2-database25812.g.aivencloud.com" },
-        { name = "DATABASE_PORT", value = "19217" },
+        { name = "DATABASE_HOST", value = "your-database-host.com" },
+        { name = "DATABASE_PORT", value = "5432" },
         { name = "DATABASE_NAME", value = "defaultdb" },
-        { name = "DATABASE_USERNAME", value = "avnadmin" },
-        { name = "DATABASE_PASSWORD", value = "AVNS_vsIotPLRrxJUhcJlM0m" },
+        { name = "DATABASE_USERNAME", value = "dbuser" },
+        { name = "DATABASE_PASSWORD", value = "change-me-db-password" },
         { name = "ASPNETCORE_URLS", value = "http://0.0.0.0:5002" },
         { name = "RABBITMQ_HOST", value = "localhost" },
         { name = "RABBITMQ_PORT", value = "5672" },
         { name = "RABBITMQ_USERNAME", value = "rabbitmq" },
-        { name = "RABBITMQ_PASSWORD", value = "0Kg04Rq08!" },
+        { name = "RABBITMQ_PASSWORD", value = "change-me-rabbitmq-password" },
         { name = "REDIS_HOST", value = "localhost" },
-        { name = "REDIS_PASSWORD", value = "0Kg04Rs05!" },
+        { name = "REDIS_PASSWORD", value = "change-me-redis-password" },
         { name = "REDIS_PORT", value = "6379" },
         { name = "GUEST_MICROSERVICE_HOST", value = "localhost" },
         { name = "GUEST_MICROSERVICE_PORT", value = "5001" }
@@ -265,7 +265,7 @@ variable "services" {
       alb_listener_rule_priority = 12
       alb_listener_rule_conditions = []
       ecs_container_name_suffix          = "apigateway"
-      ecs_container_image_repository_url = "897279497116.dkr.ecr.us-east-1.amazonaws.com/vkev-infrastructure-khanghv2406-ecr"
+      ecs_container_image_repository_url = "your-account-id.dkr.ecr.us-east-1.amazonaws.com/your-ecr-repo"
       ecs_container_image_tag            = "ApiGateway-latest"
       ecs_container_cpu                  = 100
       ecs_container_memory               = 128
@@ -331,11 +331,11 @@ variable "services" {
         }
       ]
       ecs_environment_variables = [
-        { name = "REDIS_PASSWORD", value = "0Kg04Rs05!" }
+        { name = "REDIS_PASSWORD", value = "change-me-redis-password" }
       ]
-      command = ["redis-server", "--requirepass", "0Kg04Rs05!"]
+      command = ["redis-server", "--requirepass", "change-me-redis-password"]
       ecs_container_health_check = {
-        command     = ["CMD-SHELL", "redis-cli -a 0Kg04Rs05! ping || exit 1"]
+        command     = ["CMD-SHELL", "redis-cli -a change-me-redis-password ping || exit 1"]
         interval    = 10
         timeout     = 5
         retries     = 5
@@ -381,7 +381,7 @@ variable "services" {
       ]
       ecs_environment_variables = [
         { name = "RABBITMQ_DEFAULT_USER", value = "rabbitmq" },
-        { name = "RABBITMQ_DEFAULT_PASS", value = "0Kg04Rq08!" }
+        { name = "RABBITMQ_DEFAULT_PASS", value = "change-me-rabbitmq-password" }
       ]
       ecs_container_health_check = {
         command     = ["CMD", "rabbitmqctl", "status"]

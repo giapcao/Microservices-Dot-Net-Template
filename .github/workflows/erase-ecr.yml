@@ -38,7 +38,7 @@ jobs:
     steps:
       - name: Safety check
         run: |
-          echo "⚠️ This workflow can DELETE ALL ECR repositories in region ${{ env.AWS_REGION }}."
+          echo "WARNING: This workflow can DELETE ALL ECR repositories in region ${{ env.AWS_REGION }}."
           if [ "${{ inputs.confirm }}" != "ERASE" ]; then
             echo "::error::Confirmation failed. Set 'confirm' to 'ERASE' to proceed."
             exit 1

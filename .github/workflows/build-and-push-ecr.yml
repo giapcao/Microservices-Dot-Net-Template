@@ -5,8 +5,7 @@ on:
     inputs:
       environment:
         description: "GitHub Environment to use."
-        type: choice
-        options: [infrastructure-khanghv2406]
+        type: string
         default: infrastructure-khanghv2406
         required: true
 
@@ -211,7 +210,7 @@ jobs:
           if [ "${{ needs.build-and-push.result }}" == "success" ]; then
             echo "All microservices built and pushed successfully!" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### 🚀 Ready to Deploy - Copy these values to Terraform:" >> $GITHUB_STEP_SUMMARY
+            echo "### Ready to Deploy - Copy these values to Terraform:" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`hcl" >> $GITHUB_STEP_SUMMARY
             echo "# Update these in your Terraform variables.tf" >> $GITHUB_STEP_SUMMARY

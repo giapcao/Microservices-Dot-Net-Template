@@ -1,0 +1,341 @@
+name: Full Infrastructure Deploy (Bootstrap + Build + Deploy)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "GitHub Environment to use"
+        type: string
+        default: infrastructure-khanghv2406
+        required: true
+      terraform_action:
+        description: "Terraform action to perform"
+        type: choice
+        options: [plan, apply, destroy]
+        default: apply
+        required: true
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  PROJECT_NAME: ${{ vars.PROJECT_NAME || 'vkev-infrastructure-khanghv2406' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # Step 1: Bootstrap Terraform Backend
+  bootstrap-backend:
+    name: Bootstrap Terraform Backend
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      PROJECT_NAME: ${{ vars.PROJECT_NAME || 'vkev-infrastructure-khanghv2406' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.0"
+
+      - name: Bootstrap S3 bucket and DynamoDB table
+        working-directory: Terraform/bootstrap
+        run: |
+          terraform init
+          terraform plan -var="project_name=${{ env.PROJECT_NAME }}" -var="region=${{ env.AWS_REGION }}"
+          terraform apply -auto-approve -var="project_name=${{ env.PROJECT_NAME }}" -var="region=${{ env.AWS_REGION }}"
+
+  # Step 2: Discover and Build Microservices
+  discover-services:
+    name: Discover Microservices
+    runs-on: ubuntu-latest
+    needs: bootstrap-backend
+    outputs:
+      services: ${{ steps.get-services.outputs.services }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Discover microservices
+        id: get-services
+        run: |
+          services=()
+          BASE="Backend/Microservices"
+          if [ -d "$BASE" ]; then
+            for dir in "$BASE"/*/; do
+              [ -d "$dir" ] || continue
+              service_name=$(basename "$dir")
+              if [[ ! "$service_name" =~ ^(SharedLibrary|sharedlibrary)$ ]]; then
+                if [ -f "${dir}Dockerfile" ] || [ -f "${dir}dockerfile" ] || [ -f "${dir}DockerFile" ]; then
+                  services+=("$service_name")
+                  echo "Found microservice: $service_name with Dockerfile"
+                else
+                  echo "Skipping $service_name (no Dockerfile found)"
+                fi
+              fi
+            done
+          fi
+          if [ ${#services[@]} -eq 0 ]; then
+            echo "services=[]" >> "$GITHUB_OUTPUT"
+          else
+            services_json=$(printf '%s\n' "${services[@]}" | jq -R . | jq -s -c .)
+            echo "services=$services_json" >> "$GITHUB_OUTPUT"
+            echo "Discovered services: $services_json"
+          fi
+
+  build-and-push:
+    name: Build and Push to ECR
+    runs-on: ubuntu-latest
+    needs: [bootstrap-backend, discover-services]
+    if: ${{ needs.discover-services.outputs.services != '[]' }}
+    environment:
+      name: ${{ inputs.environment }}
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.discover-services.outputs.services) }}
+      fail-fast: false
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      PROJECT_NAME: ${{ vars.PROJECT_NAME || 'vkev-infrastructure-khanghv2406' }}
+      ECR_REPO_NAME: ${{ vars.ECR_REPO_NAME || format('{0}-{1}-ecr', vars.PROJECT_NAME || 'vkev-infrastructure-khanghv2406', inputs.environment) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set image tag
+        id: set-tag
+        run: echo "IMAGE_TAG=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Create ECR repository if it doesn't exist
+        run: |
+          REPO_NAME="${{ env.ECR_REPO_NAME }}"
+          aws ecr describe-repositories --repository-names "$REPO_NAME" --region "${{ env.AWS_REGION }}" \
+          || aws ecr create-repository --repository-name "$REPO_NAME" --region "${{ env.AWS_REGION }}"
+          echo "REPO_NAME=$REPO_NAME" >> "$GITHUB_ENV"
+
+      - name: Detect Dockerfile path
+        id: dockerfile
+        run: |
+          BASE="Backend/Microservices/${{ matrix.service }}"
+          for name in Dockerfile dockerfile DockerFile; do
+            if [ -f "$BASE/$name" ]; then
+              echo "path=$BASE/$name" >> "$GITHUB_OUTPUT"
+              echo "Found Dockerfile at: $BASE/$name"
+              exit 0
+            fi
+          done
+          echo "No Dockerfile found under $BASE" >&2
+          exit 1
+
+      - name: Build and push image to Amazon ECR
+        uses: docker/build-push-action@v5
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ steps.set-tag.outputs.IMAGE_TAG }}
+        with:
+          context: Backend/Microservices
+          file: ${{ steps.dockerfile.outputs.path }}
+          build-args: |
+            SERVICE_NAME=${{ matrix.service }}
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO_NAME }}:${{ matrix.service }}-${{ env.IMAGE_TAG }}
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO_NAME }}:${{ matrix.service }}-latest
+          platforms: linux/amd64
+
+  # Step 3: Terraform Deploy
+  terraform-deploy:
+    name: Terraform Deploy
+    runs-on: ubuntu-latest
+    needs: [bootstrap-backend, build-and-push]
+    if: always() && needs.bootstrap-backend.result == 'success'
+    environment:
+      name: ${{ inputs.environment }}
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      PROJECT_NAME: ${{ vars.PROJECT_NAME || 'vkev-infrastructure-khanghv2406' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.0"
+
+      - name: Write Terraform variables from secrets
+        working-directory: Terraform
+        env:
+          SECRETS_JSON: ${{ toJson(secrets) }}
+        run: |
+          # Parse all secrets and find TERRAFORM_VARS_* secrets
+          echo "Found TERRAFORM_VARS_* secrets:"
+          echo "$SECRETS_JSON" | jq -r 'to_entries[] | select(.key | startswith("TERRAFORM_VARS_")) | .key' | sort
+          echo ""
+          
+          # Create .auto.tfvars files from secrets
+          echo "$SECRETS_JSON" | jq -r 'to_entries[] | select(.key | startswith("TERRAFORM_VARS_")) | "\(.key)=\(.value)"' | while IFS='=' read -r key value; do
+            # Extract the suffix after TERRAFORM_VARS_
+            suffix=$(echo "$key" | sed 's/^TERRAFORM_VARS_//')
+            filename="${suffix,,}.auto.tfvars"  # Convert to lowercase
+            
+            echo "Creating $filename from $key"
+            printf '%s' "$value" > "$filename"
+            
+            # Validate the created file
+            if [ -f "$filename" ]; then
+              echo "Successfully created $filename ($(wc -l < "$filename") lines)"
+            else
+              echo "ERROR: Failed to create $filename"
+            fi
+          done
+          
+          echo ""
+          echo "Created Terraform variable files dynamically:"
+          ls -la *.auto.tfvars 2>/dev/null || echo "No .auto.tfvars files found"
+
+      - name: Terraform Init
+        working-directory: Terraform
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ env.PROJECT_NAME }}-terraform-state" \
+            -backend-config="key=terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="dynamodb_table=${{ env.PROJECT_NAME }}-terraform-locks"
+
+      - name: Terraform Validate
+        working-directory: Terraform
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: Terraform
+        run: terraform plan -detailed-exitcode
+        continue-on-error: true
+
+      - name: Terraform Apply
+        if: ${{ inputs.terraform_action == 'apply' }}
+        working-directory: Terraform
+        run: terraform apply -auto-approve
+
+      - name: Terraform Destroy
+        if: ${{ inputs.terraform_action == 'destroy' }}
+        working-directory: Terraform
+        run: terraform destroy -auto-approve
+
+      - name: Output Terraform results
+        if: ${{ inputs.terraform_action == 'apply' }}
+        working-directory: Terraform
+        env:
+          DISCOVERED_SERVICES: ${{ needs.discover-services.outputs.services }}
+          SECRETS_JSON: ${{ toJson(secrets) }}
+        run: |
+          echo "## Terraform Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment**: ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Action**: ${{ inputs.terraform_action }}" >> $GITHUB_STEP_SUMMARY
+          echo "**AWS Region**: ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Project**: ${{ env.PROJECT_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Get ALB DNS name if available
+          if terraform output -raw alb_dns_name 2>/dev/null; then
+            ALB_DNS=$(terraform output -raw alb_dns_name)
+            echo "**Application Load Balancer**: http://$ALB_DNS" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Services Deployed:" >> $GITHUB_STEP_SUMMARY
+          
+          # List discovered microservices
+          if [ "$DISCOVERED_SERVICES" != "[]" ] && [ -n "$DISCOVERED_SERVICES" ]; then
+            echo "$DISCOVERED_SERVICES" | jq -r '.[]' | while read -r service; do
+              echo "- $service" >> $GITHUB_STEP_SUMMARY
+            done
+          fi
+          
+          # List additional services from TERRAFORM_VARS_* (non-microservice containers)
+          echo "$SECRETS_JSON" | jq -r 'to_entries[] | select(.key | startswith("TERRAFORM_VARS_")) | .key' | while read -r key; do
+            suffix=$(echo "$key" | sed 's/^TERRAFORM_VARS_//' | tr '[:upper:]' '[:lower:]')
+            # Skip if it's already a discovered microservice
+            if ! echo "$DISCOVERED_SERVICES" | jq -r '.[]' | grep -qi "$suffix"; then
+              echo "- $suffix" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+  # Summary Job
+  deployment-summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [bootstrap-backend, discover-services, build-and-push, terraform-deploy]
+    if: always()
+    environment:
+      name: ${{ inputs.environment }}
+    steps:
+      - name: Generate final summary
+        env:
+          DISCOVERED_SERVICES: ${{ needs.discover-services.outputs.services }}
+          SECRETS_JSON: ${{ toJson(secrets) }}
+        run: |
+          echo "## Full Infrastructure Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment**: ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Terraform Action**: ${{ inputs.terraform_action }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Job Results:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Bootstrap Backend**: ${{ needs.bootstrap-backend.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Service Discovery**: ${{ needs.discover-services.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build & Push ECR**: ${{ needs.build-and-push.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Terraform Deploy**: ${{ needs.terraform-deploy.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Dynamic services count
+          service_count=0
+          if [ "$DISCOVERED_SERVICES" != "[]" ] && [ -n "$DISCOVERED_SERVICES" ]; then
+            service_count=$(echo "$DISCOVERED_SERVICES" | jq 'length')
+          fi
+          terraform_vars_count=$(echo "$SECRETS_JSON" | jq -r 'to_entries[] | select(.key | startswith("TERRAFORM_VARS_")) | .key' | wc -l)
+          
+          echo "**Services Configured**: $service_count microservices + $terraform_vars_count terraform configurations" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.terraform-deploy.result }}" == "success" ] && [ "${{ inputs.terraform_action }}" == "apply" ]; then
+            echo "**Infrastructure successfully deployed!**" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ inputs.terraform_action }}" == "destroy" ]; then
+            echo "**Infrastructure successfully destroyed!**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Some steps failed. Check the logs above.**" >> $GITHUB_STEP_SUMMARY
+          fi

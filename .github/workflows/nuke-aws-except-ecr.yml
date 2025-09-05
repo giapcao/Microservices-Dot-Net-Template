@@ -5,8 +5,7 @@ on:
     inputs:
       environment:
         description: "GitHub Environment to use."
-        type: choice
-        options: [infrastructure-khanghv2406]
+        type: string
         default: infrastructure-khanghv2406
         required: true
       confirm:

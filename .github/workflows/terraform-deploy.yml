@@ -5,8 +5,7 @@ on:
     inputs:
       environment:
         description: "GitHub Environment to use."
-        type: choice
-        options: [infrastructure-khanghv2406]
+        type: string
         default: infrastructure-khanghv2406
         required: true
       action:
@@ -120,7 +119,7 @@ jobs:
           TF_VAR_project_name: ${{ env.PROJECT_NAME }}
           TF_VAR_aws_region: ${{ env.AWS_REGION }}
         run: |
-          echo "⚠️  WARNING: This will destroy all infrastructure!"
+          echo "WARNING: This will destroy all infrastructure!"
           echo "Sleeping for 10 seconds to allow cancellation..."
           sleep 10
           terraform destroy -input=false -auto-approve
@@ -148,15 +147,15 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [ "${{ inputs.action }}" == "plan" ]; then
-            echo "✅ Plan completed successfully! Review the changes above." >> $GITHUB_STEP_SUMMARY
+            echo "Plan completed successfully! Review the changes above." >> $GITHUB_STEP_SUMMARY
             echo "To apply these changes, run this workflow again with action: 'apply'" >> $GITHUB_STEP_SUMMARY
           elif [ "${{ inputs.action }}" == "apply" ] && [ "${{ job.status }}" == "success" ]; then
-            echo "🚀 Infrastructure deployed successfully!" >> $GITHUB_STEP_SUMMARY
+            echo "Infrastructure deployed successfully!" >> $GITHUB_STEP_SUMMARY
             echo "Check the outputs above for connection details." >> $GITHUB_STEP_SUMMARY
           elif [ "${{ inputs.action }}" == "destroy" ] && [ "${{ job.status }}" == "success" ]; then
-            echo "💥 Infrastructure destroyed successfully!" >> $GITHUB_STEP_SUMMARY
+            echo "Infrastructure destroyed successfully!" >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ Deployment failed. Check the logs above for details." >> $GITHUB_STEP_SUMMARY
+            echo "Deployment failed. Check the logs above for details." >> $GITHUB_STEP_SUMMARY
           fi
 
       - name: Upload Terraform Plan

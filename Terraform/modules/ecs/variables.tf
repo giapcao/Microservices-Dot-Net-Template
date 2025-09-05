@@ -28,11 +28,6 @@ variable "alb_security_group_id" {
   type        = string
 }
 
-variable "assign_public_ip" {
-  description = "Assign public IPs to task ENIs (typically true in public subnets)"
-  type        = bool
-  default     = true
-}
 
 variable "ecs_cluster_id" {
   description = "Cluster ID, passed from the EC2 module"

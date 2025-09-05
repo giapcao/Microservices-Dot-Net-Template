@@ -166,9 +166,8 @@ resource "aws_ecs_service" "app_service" {
   launch_type     = "EC2"
 
   network_configuration {
-    assign_public_ip = var.assign_public_ip
-    subnets          = var.task_subnet_ids
-    security_groups  = [aws_security_group.task_sg.id]
+    subnets         = var.task_subnet_ids
+    security_groups = [aws_security_group.task_sg.id]
   }
 
   ordered_placement_strategy {

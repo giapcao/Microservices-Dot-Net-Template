@@ -65,7 +65,7 @@ module "ecs" {
   aws_region       = var.aws_region
   vpc_id           = module.vpc.vpc_id
   vpc_cidr         = var.vpc_cidr
-  task_subnet_ids  = [module.vpc.private_subnet_id]
+  task_subnet_ids  = module.vpc.public_subnet_ids
   ecs_cluster_id   = module.ec2.ecs_cluster_arn
   ecs_cluster_name = module.ec2.ecs_cluster_name
   desired_count    = 1
@@ -94,6 +94,7 @@ module "ecs" {
       }
       enable_service_discovery = var.enable_service_discovery # Uses the global variable
       service_discovery_port   = var.services["guest"].ecs_service_discovery_port
+      depends_on               = var.services["guest"].depends_on
     },
     { # User Container Definition
       name                 = "user-microservice"
@@ -113,6 +114,7 @@ module "ecs" {
       }
       enable_service_discovery = var.enable_service_discovery # Uses the global variable
       service_discovery_port   = var.services["user"].ecs_service_discovery_port
+      depends_on               = var.services["user"].depends_on
     },
     { # API Gateway
       name                 = "apigateway"
@@ -132,6 +134,7 @@ module "ecs" {
       }
       enable_service_discovery = var.enable_service_discovery
       service_discovery_port   = var.services["apigateway"].ecs_service_discovery_port
+      depends_on               = var.services["apigateway"].depends_on
     },
     { # Redis
       name                 = "redis"
@@ -143,9 +146,16 @@ module "ecs" {
       port_mappings        = var.services["redis"].ecs_container_port_mappings
       environment_variables= var.services["redis"].ecs_environment_variables
       command              = lookup(var.services["redis"], "command", null)
-      health_check         = null
+      health_check = {
+        command     = var.services["redis"].ecs_container_health_check.command
+        interval    = var.services["redis"].ecs_container_health_check.interval
+        timeout     = var.services["redis"].ecs_container_health_check.timeout
+        retries     = var.services["redis"].ecs_container_health_check.retries
+        startPeriod = var.services["redis"].ecs_container_health_check.startPeriod
+      }
       enable_service_discovery = var.enable_service_discovery
       service_discovery_port   = var.services["redis"].ecs_service_discovery_port
+      depends_on               = var.services["redis"].depends_on
     },
     { # RabbitMQ
       name                 = "rabbit-mq"
@@ -156,9 +166,16 @@ module "ecs" {
       essential            = var.services["rabbitmq"].ecs_container_essential
       port_mappings        = var.services["rabbitmq"].ecs_container_port_mappings
       environment_variables= var.services["rabbitmq"].ecs_environment_variables
-      health_check         = null
+      health_check = {
+        command     = var.services["rabbitmq"].ecs_container_health_check.command
+        interval    = var.services["rabbitmq"].ecs_container_health_check.interval
+        timeout     = var.services["rabbitmq"].ecs_container_health_check.timeout
+        retries     = var.services["rabbitmq"].ecs_container_health_check.retries
+        startPeriod = var.services["rabbitmq"].ecs_container_health_check.startPeriod
+      }
       enable_service_discovery = var.enable_service_discovery
       service_discovery_port   = var.services["rabbitmq"].ecs_service_discovery_port
+      depends_on               = var.services["rabbitmq"].depends_on
     }
   ]
 
@@ -171,7 +188,7 @@ module "ecs" {
   ]
 
   enable_auto_scaling      = var.enable_auto_scaling
-  enable_service_discovery = true
+  enable_service_discovery = var.enable_service_discovery
 
   depends_on = [module.ec2]
 }

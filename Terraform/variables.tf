@@ -108,14 +108,15 @@ variable "services" {
       name  = string
       value = string
     }))
-    ecs_container_health_check = object({
+    ecs_container_health_check = optional(object({
       command     = list(string)
       interval    = number
       timeout     = number
       retries     = number
       startPeriod = number
-    })
+    }))
     ecs_service_discovery_port = number # Port for service discovery registration
+    depends_on                 = optional(list(string), []) # Container names this depends on
   }))
   default = {
     "guest" = {
@@ -162,11 +163,11 @@ variable "services" {
         { name = "DATABASE_USERNAME", value = "avnadmin" },
         { name = "DATABASE_PASSWORD", value = "AVNS_iGi4kJJObNRnGdM6BTb" },
         { name = "ASPNETCORE_URLS", value = "http://0.0.0.0:5001" },
-        { name = "RABBITMQ_HOST", value = "rabbit-mq.projectname.local" },
+        { name = "RABBITMQ_HOST", value = "localhost" },
         { name = "RABBITMQ_PORT", value = "5672" },
         { name = "RABBITMQ_USERNAME", value = "rabbitmq" },
         { name = "RABBITMQ_PASSWORD", value = "0Kg04Rq08!" },
-        { name = "REDIS_HOST", value = "redis.projectname.local" },
+        { name = "REDIS_HOST", value = "localhost" },
         { name = "REDIS_PASSWORD", value = "0Kg04Rs05!" },
         { name = "REDIS_PORT", value = "6379" },
         { name = "USER_MICROSERVICE_HOST", value = "localhost" },
@@ -180,6 +181,7 @@ variable "services" {
         startPeriod = 0
       }
       ecs_service_discovery_port = 5001
+      depends_on                 = ["redis", "rabbit-mq"]
     },
     "user" = {
       alb_target_group_port     = 5002
@@ -225,11 +227,11 @@ variable "services" {
         { name = "DATABASE_USERNAME", value = "avnadmin" },
         { name = "DATABASE_PASSWORD", value = "AVNS_vsIotPLRrxJUhcJlM0m" },
         { name = "ASPNETCORE_URLS", value = "http://0.0.0.0:5002" },
-        { name = "RABBITMQ_HOST", value = "rabbit-mq.projectname.local" },
+        { name = "RABBITMQ_HOST", value = "localhost" },
         { name = "RABBITMQ_PORT", value = "5672" },
         { name = "RABBITMQ_USERNAME", value = "rabbitmq" },
         { name = "RABBITMQ_PASSWORD", value = "0Kg04Rq08!" },
-        { name = "REDIS_HOST", value = "redis.projectname.local" },
+        { name = "REDIS_HOST", value = "localhost" },
         { name = "REDIS_PASSWORD", value = "0Kg04Rs05!" },
         { name = "REDIS_PORT", value = "6379" },
         { name = "GUEST_MICROSERVICE_HOST", value = "localhost" },
@@ -243,6 +245,7 @@ variable "services" {
         startPeriod = 0
       }
       ecs_service_discovery_port = 5002
+      depends_on                 = ["redis", "rabbit-mq"]
     },
     "apigateway" = {
       alb_target_group_port     = 8080
@@ -282,9 +285,9 @@ variable "services" {
         { name = "GUEST_MICROSERVICE_HOST", value = "localhost" },
         { name = "GUEST_MICROSERVICE_PORT", value = "5001" },
         { name = "BASE_URL", value = "http://apigateway.projectname.local:8080" },
-        { name = "RABBITMQ_HOST", value = "rabbit-mq.projectname.local" },
+        { name = "RABBITMQ_HOST", value = "localhost" },
         { name = "RABBITMQ_PORT", value = "5672" },
-        { name = "REDIS_HOST", value = "redis.projectname.local" },
+        { name = "REDIS_HOST", value = "localhost" },
         { name = "REDIS_PORT", value = "6379" }
       ]
       ecs_container_health_check = {
@@ -295,6 +298,7 @@ variable "services" {
         startPeriod = 0
       }
       ecs_service_discovery_port = 8080
+      depends_on                 = []
     },
     "redis" = {
       alb_target_group_port     = 6379
@@ -330,8 +334,15 @@ variable "services" {
         { name = "REDIS_PASSWORD", value = "0Kg04Rs05!" }
       ]
       command = ["redis-server", "--requirepass", "0Kg04Rs05!"]
-      ecs_container_health_check = null
+      ecs_container_health_check = {
+        command     = ["CMD-SHELL", "redis-cli -a 0Kg04Rs05! ping || exit 1"]
+        interval    = 10
+        timeout     = 5
+        retries     = 5
+        startPeriod = 30
+      }
       ecs_service_discovery_port = 6379
+      depends_on                 = []
     },
     "rabbitmq" = {
       alb_target_group_port     = 5672
@@ -372,8 +383,15 @@ variable "services" {
         { name = "RABBITMQ_DEFAULT_USER", value = "rabbitmq" },
         { name = "RABBITMQ_DEFAULT_PASS", value = "0Kg04Rq08!" }
       ]
-      ecs_container_health_check = null
+      ecs_container_health_check = {
+        command     = ["CMD", "rabbitmqctl", "status"]
+        interval    = 10
+        timeout     = 5
+        retries     = 5
+        startPeriod = 30
+      }
       ecs_service_discovery_port = 5672
+      depends_on                 = []
     }
   }
 }

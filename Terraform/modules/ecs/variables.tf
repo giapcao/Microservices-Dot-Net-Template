@@ -82,6 +82,7 @@ variable "containers" {
     }))
     enable_service_discovery = optional(bool, false)
     service_discovery_port   = optional(number) # The containerPort to register with service discovery
+    depends_on               = optional(list(string), []) # Container names this container depends on
   }))
   default = []
 }

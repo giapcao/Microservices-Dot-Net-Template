@@ -143,6 +143,14 @@ resource "aws_ecs_task_definition" "app_task" {
           retries     = c.health_check.retries
           startPeriod = c.health_check.startPeriod
         }
+      } : {},
+      length(c.depends_on) > 0 ? {
+        dependsOn = [
+          for dep in c.depends_on : {
+            containerName = dep
+            condition     = "HEALTHY"
+          }
+        ]
       } : {}
     )
   ])

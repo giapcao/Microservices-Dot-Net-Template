@@ -116,7 +116,7 @@ variable "services" {
       startPeriod = number
     }))
     ecs_service_discovery_port = number # Port for service discovery registration
-    depends_on                 = optional(list(string), []) # Container names this depends on
+    depends_on = optional(list(string)) # Container names this depends on
   }))
   default = {
     "guest" = {

@@ -1,4 +1,4 @@
-name: Full Infrastructure Deploy (Bootstrap + Build + Deploy)
+name: Full Infrastructure Deploy
 
 on:
   workflow_dispatch:

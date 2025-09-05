@@ -1,7 +1,3 @@
-terraform {
-  experiments = [module_variable_optional_attrs]
-}
-
 variable "project_name" {
   description = "Prefix for all ECS-related resources"
   type        = string
@@ -66,27 +62,27 @@ variable "containers" {
     image_tag            = string
     cpu                  = number # CPU units for this container
     memory               = number # Memory (MiB) for this container
-    essential            = optional(bool)
+    essential            = optional(bool, true)
     command              = optional(list(string))
     port_mappings = list(object({
       container_port = number
-      host_port      = optional(number) # 0 for dynamic host port assignment
-      protocol       = optional(string)
+      host_port      = optional(number, 0) # 0 for dynamic host port assignment
+      protocol       = optional(string, "tcp")
     }))
     environment_variables = optional(list(object({
       name  = string
       value = string
-    })))
+    })), [])
     health_check = optional(object({
       command     = list(string)
-      interval    = optional(number)
-      timeout     = optional(number)
-      retries     = optional(number)
-      startPeriod = optional(number) # Time to ignore health check on startup
+      interval    = optional(number, 30)
+      timeout     = optional(number, 5)
+      retries     = optional(number, 3)
+      startPeriod = optional(number, 60) # Time to ignore health check on startup
     }))
-    enable_service_discovery = optional(bool)
+    enable_service_discovery = optional(bool, false)
     service_discovery_port   = optional(number) # The containerPort to register with service discovery
-    depends_on               = optional(list(string)) # Container names this container depends on
+    depends_on               = optional(list(string), []) # Container names this container depends on
   }))
   default = []
 }

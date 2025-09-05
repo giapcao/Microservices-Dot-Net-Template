@@ -46,7 +46,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: "~1.0"
+          terraform_version: "1.6.6"
 
       - name: Bootstrap S3 bucket and DynamoDB table
         working-directory: Terraform/bootstrap
@@ -195,38 +195,102 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: "~1.0"
+          terraform_version: "1.6.6"
 
       - name: Write Terraform variables from secrets
         working-directory: Terraform
         env:
           SECRETS_JSON: ${{ toJson(secrets) }}
         run: |
-          # Parse all secrets and find TERRAFORM_VARS_* secrets
+          set -euo pipefail
+
+          # List keys once for visibility
           echo "Found TERRAFORM_VARS_* secrets:"
-          echo "$SECRETS_JSON" | jq -r 'to_entries[] | select(.key | startswith("TERRAFORM_VARS_")) | .key' | sort
+          echo "$SECRETS_JSON" \
+            | jq -r 'to_entries[] | select(.key | startswith("TERRAFORM_VARS_")) | .key' \
+            | sort
           echo ""
-          
-          # Create .auto.tfvars files from secrets
-          echo "$SECRETS_JSON" | jq -r 'to_entries[] | select(.key | startswith("TERRAFORM_VARS_")) | "\(.key)=\(.value)"' | while IFS='=' read -r key value; do
-            # Extract the suffix after TERRAFORM_VARS_
-            suffix=$(echo "$key" | sed 's/^TERRAFORM_VARS_//')
-            filename="${suffix,,}.auto.tfvars"  # Convert to lowercase
-            
-            echo "Creating $filename from $key"
-            printf '%s' "$value" > "$filename"
-            
-            # Validate the created file
-            if [ -f "$filename" ]; then
-              echo "Successfully created $filename ($(wc -l < "$filename") lines)"
-            else
-              echo "ERROR: Failed to create $filename"
-            fi
-          done
-          
-          echo ""
-          echo "Created Terraform variable files dynamically:"
-          ls -la *.auto.tfvars 2>/dev/null || echo "No .auto.tfvars files found"
+
+          # Create .auto.tfvars files from secrets (preserve multi-line values, avoid splitting on '=')
+          echo "$SECRETS_JSON" \
+            | jq -r 'to_entries[] | select(.key | startswith("TERRAFORM_VARS_")) | .key' \
+            | while read -r key; do
+                # Extract the suffix after TERRAFORM_VARS_
+                suffix=${key#TERRAFORM_VARS_}
+                # Normalize: lowercase, trim, replace spaces and slashes/backslashes with underscores
+                norm=$(echo "$suffix" \
+                  | tr '[:upper:]' '[:lower:]' \
+                  | sed 's/^\s\+//;s/\s\+$//' \
+                  | tr ' /\\' '___' )
+                # Decide extension based on whether the value is JSON
+                value=$(jq -r --arg k "$key" '.[$k]' <<< "$SECRETS_JSON")
+                if echo "$value" | jq -e . >/dev/null 2>&1; then
+                  # JSON content -> write as .auto.tfvars.json
+                  case "$norm" in
+                    *.auto.tfvars.json|*.tfvars.json)
+                      filename="$norm"
+                      ;;
+                    *.auto.tfvars|*.tfvars)
+                      filename="$norm.json"
+                      ;;
+                    *)
+                      filename="$norm.auto.tfvars.json"
+                      ;;
+                  esac
+                  echo "Creating $filename from $key (JSON)"
+                  printf '%s' "$value" > "$filename"
+                else
+                  # Non-JSON -> write raw as .auto.tfvars (HCL)
+                  case "$norm" in
+                    *.auto.tfvars|*.tfvars)
+                      filename="$norm"
+                      ;;
+                    *.auto.tfvars.json|*.tfvars.json)
+                      filename="${norm%.json}"
+                      ;;
+                    *)
+                      filename="$norm.auto.tfvars"
+                      ;;
+                  esac
+                  echo "Creating $filename from $key (HCL/raw)"
+                  printf '%s' "$value" > "$filename"
+                fi
+
+                if [ -z "$suffix" ]; then
+                  echo "Skipping empty suffix for key: $key"
+                  continue
+                fi
+
+                # Validate the created file
+                if [ -f "$filename" ]; then
+                  echo "Successfully created $filename ($(wc -l < "$filename") lines)"
+                else
+                  echo "ERROR: Failed to create $filename"
+                fi
+              done
+
+          # Merge all .auto.tfvars.json files into a single file to avoid override issues
+          json_files=( *.auto.tfvars.json )
+          if ls ${json_files[@]} >/dev/null 2>&1; then
+            echo "Merging JSON tfvars into 99-merged.auto.tfvars.json"
+            jq -s '
+              def deepmerge(a;b):
+                reduce b as $item (
+                  a;
+                  . as $in
+                  | ($item | to_entries[]) as $e
+                  | if ($in[$e.key] | type) == "object" and ($e.value | type) == "object"
+                    then .[$e.key] = deepmerge($in[$e.key]; $e.value)
+                    else .[$e.key] = $e.value
+                    end
+                );
+              reduce .[] as $obj ({}; deepmerge(.; $obj))
+            ' ${json_files[@]} > 99-merged.auto.tfvars.json
+            echo "Created 99-merged.auto.tfvars.json ($(wc -l < 99-merged.auto.tfvars.json) lines)"
+          fi
+
+          echo "\nCreated Terraform variable files dynamically:"
+          ls -la *.auto.tfvars* 2>/dev/null || echo "No .auto.tfvars files found"
 
       - name: Terraform Init
         working-directory: Terraform

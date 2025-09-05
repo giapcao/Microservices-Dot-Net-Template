@@ -66,27 +66,27 @@ variable "containers" {
     image_tag            = string
     cpu                  = number # CPU units for this container
     memory               = number # Memory (MiB) for this container
-    essential            = optional(bool, true)
+    essential            = optional(bool)
     command              = optional(list(string))
     port_mappings = list(object({
       container_port = number
-      host_port      = optional(number, 0) # 0 for dynamic host port assignment
-      protocol       = optional(string, "tcp")
+      host_port      = optional(number) # 0 for dynamic host port assignment
+      protocol       = optional(string)
     }))
     environment_variables = optional(list(object({
       name  = string
       value = string
-    })), [])
+    })))
     health_check = optional(object({
       command     = list(string)
-      interval    = optional(number, 30)
-      timeout     = optional(number, 5)
-      retries     = optional(number, 3)
-      startPeriod = optional(number, 60) # Time to ignore health check on startup
+      interval    = optional(number)
+      timeout     = optional(number)
+      retries     = optional(number)
+      startPeriod = optional(number) # Time to ignore health check on startup
     }))
-    enable_service_discovery = optional(bool, false)
+    enable_service_discovery = optional(bool)
     service_discovery_port   = optional(number) # The containerPort to register with service discovery
-    depends_on               = optional(list(string), []) # Container names this container depends on
+    depends_on               = optional(list(string)) # Container names this container depends on
   }))
   default = []
 }

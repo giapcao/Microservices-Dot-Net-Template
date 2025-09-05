@@ -22,20 +22,20 @@ variable "target_groups_definition" {
   type = list(object({
     name_suffix = string # Unique suffix for the target group name (e.g., "app1-frontend", "api-service")
     port        = number # The port on which targets receive traffic
-    protocol    = optional(string, "HTTP") # Protocol for routing traffic to targets (HTTP, HTTPS)
-    target_type = optional(string, "instance") # Target type: "instance", "ip", or "lambda"
+    protocol    = optional(string) # Protocol for routing traffic to targets (HTTP, HTTPS)
+    target_type = optional(string) # Target type: "instance", "ip", or "lambda"
 
     health_check = optional(object({
-      enabled             = optional(bool, true)    # Whether health checks are enabled
-      path                = optional(string, "/")   # Destination for health checks
-      port                = optional(string, "traffic-port") # Port for health checks
-      protocol            = optional(string, "HTTP")  # Protocol for health checks (HTTP, HTTPS, TCP)
-      healthy_threshold   = optional(number, 3)     # Number of consecutive successful checks for healthy status
-      unhealthy_threshold = optional(number, 2)     # Number of consecutive failed checks for unhealthy status
-      interval            = optional(number, 30)    # Approximate time (seconds) between health checks
-      timeout             = optional(number, 5)     # Amount of time (seconds) to wait for a response before failing
-      matcher             = optional(string, "200") # Expected HTTP codes for success (e.g., "200", "200-299")
-    }), {}) # Defaults to an empty object, implying provider defaults for unspecified fields if health_check block is rendered.
+      enabled             = optional(bool)    # Whether health checks are enabled
+      path                = optional(string)   # Destination for health checks
+      port                = optional(string) # Port for health checks
+      protocol            = optional(string)  # Protocol for health checks (HTTP, HTTPS, TCP)
+      healthy_threshold   = optional(number)     # Number of consecutive successful checks for healthy status
+      unhealthy_threshold = optional(number)     # Number of consecutive failed checks for unhealthy status
+      interval            = optional(number)    # Approximate time (seconds) between health checks
+      timeout             = optional(number)     # Amount of time (seconds) to wait for a response before failing
+      matcher             = optional(string) # Expected HTTP codes for success (e.g., "200", "200-299")
+    }))
   }))
   default = []
 }

@@ -210,6 +210,11 @@ jobs:
             cp ../terraform-vars/*.auto.tfvars . || true
           fi
 
+          # Ensure jq is available in this job
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
+
           # List keys once for visibility
           echo "Found TERRAFORM_VARS_* secrets:"
           echo "$SECRETS_JSON" \
@@ -275,62 +280,13 @@ jobs:
                 fi
               done
 
-          # Merge all .auto.tfvars.json files into a single file to avoid override issues
-          json_files=( *.auto.tfvars.json )
-          if ls ${json_files[@]} >/dev/null 2>&1; then
-            echo "Merging JSON tfvars into 99-merged.auto.tfvars.json"
-            jq -s '
-              def deepmerge(a;b):
-                reduce b as $item (
-                  a;
-                  . as $in
-                  | ($item | to_entries[]) as $e
-                  | if ($in[$e.key] | type) == "object" and ($e.value | type) == "object"
-                    then .[$e.key] = deepmerge($in[$e.key]; $e.value)
-                    else .[$e.key] = $e.value
-                    end
-                );
-              reduce .[] as $obj ({}; deepmerge(.; $obj))
-            ' ${json_files[@]} > 99-merged.auto.tfvars.json
-            echo "Created 99-merged.auto.tfvars.json ($(wc -l < 99-merged.auto.tfvars.json) lines)"
-          fi
-
           # Merge all HCL and JSON tfvars together using python-hcl2 for HCL files
           echo "Merging all HCL/JSON tfvars into 00-all.auto.tfvars.json"
           sudo apt-get update -y >/dev/null
           sudo apt-get install -y python3-pip >/dev/null
           python3 -m pip install --user python-hcl2 >/dev/null
           export PATH="$HOME/.local/bin:$PATH"
-          python3 - <<'PY'
-import json, glob
-merged = {}
-def deep_merge(a,b):
-    for k,v in b.items():
-        if k in a and isinstance(a[k], dict) and isinstance(v, dict):
-            deep_merge(a[k], v)
-        else:
-            a[k] = v
-paths = sorted(glob.glob('*.auto.tfvars')) + sorted(glob.glob('*.auto.tfvars.json'))
-for p in paths:
-    try:
-        if p.endswith('.json'):
-            with open(p,'r') as f:
-                data = json.load(f)
-        else:
-            import hcl2
-            with open(p,'r') as f:
-                data = hcl2.load(f)
-        if isinstance(data, dict):
-            deep_merge(merged, data)
-        else:
-            print(f"Skip {p}: not a dict root")
-    except Exception as e:
-        print(f"Skip {p}: {e}")
-with open('00-all.auto.tfvars.json','w') as f:
-    json.dump(merged, f)
-print('Merged files:', paths)
-print('Final keys:', list(merged.keys()))
-PY
+          python3 scripts/merge_tfvars.py
 
           # Remove all other tfvars so only the merged file is auto-loaded
           for f in *.auto.tfvars *.auto.tfvars.json; do

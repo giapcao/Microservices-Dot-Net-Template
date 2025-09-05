@@ -81,6 +81,18 @@ namespace SharedLibrary.Utils
         public void UpdateAppSettings()
         {
             var connectionString = $"Host={Host};Port={Port};Database={Database};Username={Username};Password={Password}";
+
+            // Optional SSL settings for managed Postgres providers (e.g., Aiven)
+            var sslMode = Environment.GetEnvironmentVariable("DATABASE_SSLMODE");
+            var trustServerCert = Environment.GetEnvironmentVariable("DATABASE_TRUST_SERVER_CERTIFICATE");
+            if (!string.IsNullOrWhiteSpace(sslMode))
+            {
+                connectionString += $";Ssl Mode={sslMode}";
+                if (!string.IsNullOrWhiteSpace(trustServerCert))
+                {
+                    connectionString += $";Trust Server Certificate={trustServerCert}";
+                }
+            }
             UpdateAppSettingsFile("appsettings.json", connectionString);
             UpdateAppSettingsFile("appsettings.Development.json", connectionString);
         }

@@ -73,7 +73,7 @@ module "ecs" {
   task_cpu    = 800
   task_memory = 800
   alb_security_group_id = module.alb.alb_sg_id
-  assign_public_ip      = false
+  assign_public_ip      = true
 
   containers = [
     { # Guest Container Definition
@@ -171,7 +171,7 @@ module "ecs" {
   ]
 
   enable_auto_scaling      = var.enable_auto_scaling
-  enable_service_discovery = var.enable_service_discovery
+  enable_service_discovery = true
 
   depends_on = [module.ec2]
 }

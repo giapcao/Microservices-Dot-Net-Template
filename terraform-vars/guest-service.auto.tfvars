@@ -27,7 +27,7 @@ services = {
 
     # ECS Container
     ecs_container_name_suffix          = "microservice"
-    ecs_container_image_repository_url = "897279497116.dkr.ecr.us-east-1.amazonaws.com/vkev-infrastructure-khanghv2406-ecr"
+    ecs_container_image_repository_url = "your-aws-id-account.dkr.ecr.us-east-1.amazonaws.com/vkev-infrastructure-khanghv2406-ecr"
     ecs_container_image_tag            = "Guest.Microservice-latest"
     ecs_container_cpu                  = 100
     ecs_container_memory               = 128
@@ -70,6 +70,6 @@ services = {
     }
 
     ecs_service_discovery_port = 5001
-    depends_on                 = ["redis", "rabbit-mq"]
+    depends_on                 = ["redis", "rabbitmq"]
   }
 }

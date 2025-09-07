@@ -181,7 +181,7 @@ variable "services" {
         startPeriod = 0
       }
       ecs_service_discovery_port = 5001
-      depends_on                 = ["redis", "rabbit-mq"]
+      depends_on                 = ["redis", "rabbitmq"]
     },
     "user" = {
       alb_target_group_port     = 5002
@@ -245,7 +245,7 @@ variable "services" {
         startPeriod = 0
       }
       ecs_service_discovery_port = 5002
-      depends_on                 = ["redis", "rabbit-mq"]
+      depends_on                 = ["redis", "rabbitmq"]
     },
     "apigateway" = {
       alb_target_group_port     = 8080

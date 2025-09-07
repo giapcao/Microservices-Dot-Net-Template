@@ -70,6 +70,6 @@ services = {
     }
 
     ecs_service_discovery_port = 5001
-    depends_on                 = ["redis", "rabbitmq"]
+    depends_on                 = ["redis", "rabbit-mq"]
   }
 }

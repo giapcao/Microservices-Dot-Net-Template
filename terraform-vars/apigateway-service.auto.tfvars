@@ -23,8 +23,8 @@ services = {
     ecs_container_name_suffix          = "apigateway"
     ecs_container_image_repository_url = "your-aws-id-account.dkr.ecr.us-east-1.amazonaws.com/vkev-infrastructure-khanghv2406-ecr"
     ecs_container_image_tag            = "ApiGateway-latest"
-    ecs_container_cpu                  = 100
-    ecs_container_memory               = 128
+    ecs_container_cpu                  = 120
+    ecs_container_memory               = 120
     ecs_container_essential            = true
     ecs_container_port_mappings = [
       {
@@ -37,16 +37,11 @@ services = {
     # Environment Variables
     ecs_environment_variables = [
       { name = "ASPNETCORE_ENVIRONMENT", value = "Production" },
-      { name = "ASPNETCORE_URLS", value = "http://0.0.0.0:8080" },
+      { name = "ASPNETCORE_URLS", value = "http://+:8080" },
       { name = "USER_MICROSERVICE_HOST", value = "localhost" },
       { name = "USER_MICROSERVICE_PORT", value = "5002" },
       { name = "GUEST_MICROSERVICE_HOST", value = "localhost" },
-      { name = "GUEST_MICROSERVICE_PORT", value = "5001" },
-      { name = "BASE_URL", value = "http://apigateway.projectname.local:8080" },
-      { name = "RABBITMQ_HOST", value = "localhost" },
-      { name = "RABBITMQ_PORT", value = "5672" },
-      { name = "REDIS_HOST", value = "localhost" },
-      { name = "REDIS_PORT", value = "6379" }
+      { name = "GUEST_MICROSERVICE_PORT", value = "5001" }
     ]
 
     # Health Check

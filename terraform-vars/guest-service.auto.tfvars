@@ -29,8 +29,8 @@ services = {
     ecs_container_name_suffix          = "microservice"
     ecs_container_image_repository_url = "your-aws-id-account.dkr.ecr.us-east-1.amazonaws.com/vkev-infrastructure-khanghv2406-ecr"
     ecs_container_image_tag            = "Guest.Microservice-latest"
-    ecs_container_cpu                  = 100
-    ecs_container_memory               = 128
+    ecs_container_cpu                  = 150
+    ecs_container_memory               = 150
     ecs_container_essential            = true
     ecs_container_port_mappings = [
       {
@@ -43,21 +43,19 @@ services = {
     # Environment Variables
     ecs_environment_variables = [
       { name = "ASPNETCORE_ENVIRONMENT", value = "Production" },
-      { name = "DATABASE_HOST", value = "your-database-host.com" },
+      { name = "DATABASE_HOST", value = "pg-1-database25811.g.aivencloud.com" },
       { name = "DATABASE_PORT", value = "16026" },
       { name = "DATABASE_NAME", value = "defaultdb" },
-      { name = "DATABASE_USERNAME", value = "your-db-username" },
-      { name = "DATABASE_PASSWORD", value = "your-db-password" },
-      { name = "ASPNETCORE_URLS", value = "http://0.0.0.0:5001" },
+      { name = "DATABASE_USERNAME", value = "avnadmin" },
+      { name = "DATABASE_PASSWORD", value = "AVNS_iGi4kJJObNRnGdM6BTb" },
+      { name = "ASPNETCORE_URLS", value = "http://+:5001" },
       { name = "RABBITMQ_HOST", value = "localhost" },
       { name = "RABBITMQ_PORT", value = "5672" },
       { name = "RABBITMQ_USERNAME", value = "rabbitmq" },
-      { name = "RABBITMQ_PASSWORD", value = "your-rabbitmq-password" },
+      { name = "RABBITMQ_PASSWORD", value = "0Kg04Rq08!" },
       { name = "REDIS_HOST", value = "localhost" },
-      { name = "REDIS_PASSWORD", value = "your-redis-password" },
-      { name = "REDIS_PORT", value = "6379" },
-      { name = "USER_MICROSERVICE_HOST", value = "localhost" },
-      { name = "USER_MICROSERVICE_PORT", value = "5002" }
+      { name = "REDIS_PASSWORD", value = "0Kg04Rs05!" },
+      { name = "REDIS_PORT", value = "6379" }
     ]
 
     # Health Check

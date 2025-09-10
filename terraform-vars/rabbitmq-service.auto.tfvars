@@ -23,8 +23,8 @@ services = {
     ecs_container_name_suffix          = "rabbitmq"
     ecs_container_image_repository_url = "rabbitmq"
     ecs_container_image_tag            = "3-management"
-    ecs_container_cpu                  = 100
-    ecs_container_memory               = 120
+    ecs_container_cpu                  = 150
+    ecs_container_memory               = 200
     ecs_container_essential            = true
     ecs_container_port_mappings = [
       {
@@ -42,8 +42,8 @@ services = {
     # Environment Variables
     ecs_environment_variables = [
       { name = "RABBITMQ_DEFAULT_USER", value = "rabbitmq" },
-      { name = "RABBITMQ_DEFAULT_PASS", value = "0Kg04Rq08!" }
-    ]
+      { name = "RABBITMQ_DEFAULT_PASS", value = "your-rabbitmq-password" }
+    ] 
 
     # Health Check
     ecs_container_health_check = {

@@ -27,7 +27,7 @@ services = {
     ecs_container_memory               = 120
     ecs_container_essential            = true
     ecs_container_port_mappings = [
-      {
+      { 
         container_port = 6379
         host_port      = 0
         protocol       = "tcp"
@@ -36,12 +36,12 @@ services = {
 
     # Environment Variables
     ecs_environment_variables = [
-      { name = "REDIS_PASSWORD", value = "0Kg04Rs05!" }
+      { name = "REDIS_PASSWORD", value = "your-redis-password" }
     ]
 
     # Health Check
     ecs_container_health_check = {
-      command     = ["CMD-SHELL", "redis-cli -a 0Kg04Rs05! ping || exit 1"]
+      command     = ["CMD-SHELL", "redis-cli -a your-redis-password ping || exit 1"]
       interval    = 10
       timeout     = 5
       retries     = 5
@@ -50,6 +50,6 @@ services = {
 
     ecs_service_discovery_port = 6379
     depends_on                 = []
-    command                    = ["redis-server", "--requirepass", "0Kg04Rs05!"]
+    command                    = ["redis-server", "--requirepass", "your-redis-password"]
   }
 }

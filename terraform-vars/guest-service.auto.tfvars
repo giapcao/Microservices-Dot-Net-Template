@@ -27,13 +27,13 @@ services = {
 
     # ECS Container
     ecs_container_name_suffix          = "microservice"
-    ecs_container_image_repository_url = "your-aws-id-account.dkr.ecr.us-east-1.amazonaws.com/vkev-infrastructure-khanghv2406-ecr"
+    ecs_container_image_repository_url = "your-aws-account-id.dkr.ecr.us-east-1.amazonaws.com/your-ecr-repository"
     ecs_container_image_tag            = "Guest.Microservice-latest"
     ecs_container_cpu                  = 150
     ecs_container_memory               = 150
     ecs_container_essential            = true
     ecs_container_port_mappings = [
-      {
+      { 
         container_port = 5001
         host_port      = 0
         protocol       = "tcp"
@@ -43,18 +43,18 @@ services = {
     # Environment Variables
     ecs_environment_variables = [
       { name = "ASPNETCORE_ENVIRONMENT", value = "Production" },
-      { name = "DATABASE_HOST", value = "pg-1-database25811.g.aivencloud.com" },
-      { name = "DATABASE_PORT", value = "16026" },
-      { name = "DATABASE_NAME", value = "defaultdb" },
-      { name = "DATABASE_USERNAME", value = "avnadmin" },
-      { name = "DATABASE_PASSWORD", value = "AVNS_iGi4kJJObNRnGdM6BTb" },
+      { name = "DATABASE_HOST", value = "your-database-host" },
+      { name = "DATABASE_PORT", value = "5432" },
+      { name = "DATABASE_NAME", value = "your-database-name" },
+      { name = "DATABASE_USERNAME", value = "your-db-username" },
+      { name = "DATABASE_PASSWORD", value = "your-db-password" },
       { name = "ASPNETCORE_URLS", value = "http://+:5001" },
       { name = "RABBITMQ_HOST", value = "localhost" },
       { name = "RABBITMQ_PORT", value = "5672" },
       { name = "RABBITMQ_USERNAME", value = "rabbitmq" },
-      { name = "RABBITMQ_PASSWORD", value = "0Kg04Rq08!" },
+      { name = "RABBITMQ_PASSWORD", value = "your-rabbitmq-password" },
       { name = "REDIS_HOST", value = "localhost" },
-      { name = "REDIS_PASSWORD", value = "0Kg04Rs05!" },
+      { name = "REDIS_PASSWORD", value = "your-redis-password" },
       { name = "REDIS_PORT", value = "6379" }
     ]
 

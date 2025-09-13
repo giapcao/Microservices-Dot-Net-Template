@@ -42,7 +42,7 @@ services = {
     # Environment Variables
     ecs_environment_variables = [
       { name = "RABBITMQ_DEFAULT_USER", value = "rabbitmq" },
-      { name = "RABBITMQ_DEFAULT_PASS", value = "your-rabbitmq-password" }
+      { name = "RABBITMQ_DEFAULT_PASS", value = "0Kg04Rq08!" }
     ] 
 
     # Health Check

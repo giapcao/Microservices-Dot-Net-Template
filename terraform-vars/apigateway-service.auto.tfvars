@@ -21,7 +21,7 @@ services = {
 
     # ECS Container
     ecs_container_name_suffix          = "apigateway"
-    ecs_container_image_repository_url = "your-aws-account-id.dkr.ecr.us-east-1.amazonaws.com/your-ecr-repository"
+    ecs_container_image_repository_url = "897279497116.dkr.ecr.us-east-1.amazonaws.com/your-ecr-repository"
     ecs_container_image_tag            = "ApiGateway-latest"
     ecs_container_cpu                  = 120
     ecs_container_memory               = 120
@@ -41,7 +41,11 @@ services = {
       { name = "USER_MICROSERVICE_HOST", value = "localhost" },
       { name = "USER_MICROSERVICE_PORT", value = "5002" },
       { name = "GUEST_MICROSERVICE_HOST", value = "localhost" },
-      { name = "GUEST_MICROSERVICE_PORT", value = "5001" }
+      { name = "GUEST_MICROSERVICE_PORT", value = "5001" },
+      { name = "Jwt__SecretKey", value = "YourSuperSecretKeyThatIsAtLeast32CharactersLong!@#$%^&*()" },
+      { name = "Jwt__Issuer", value = "UserMicroservice" },
+      { name = "Jwt__Audience", value = "MicroservicesApp" },
+      { name = "Jwt__ExpirationMinutes", value = "60" }
     ]
 
     # Health Check

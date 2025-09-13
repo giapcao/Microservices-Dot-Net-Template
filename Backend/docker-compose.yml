@@ -53,6 +53,11 @@ services:
       REDIS_HOST: redis
       REDIS_PASSWORD: YOUR_PASSWORD
       REDIS_PORT: 6379
+      # JWT Configuration
+      Jwt__SecretKey: YourSuperSecretKeyThatIsAtLeast32CharactersLong!@#$%^&*()
+      Jwt__Issuer: UserMicroservice
+      Jwt__Audience: MicroservicesApp
+      Jwt__ExpirationMinutes: 60
     depends_on:
       rabbit-mq:
         condition: service_healthy
@@ -72,10 +77,15 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
-      USER_MICROSERVICE_HOST: YOUR_MICROSERVICE_HOST #example: user-microservice (the docker service name)
-      USER_MICROSERVICE_PORT: YOUR_MICROSERVICE_PORT
-      GUEST_MICROSERVICE_HOST: YOUR_MICROSERVICE_HOST
-      GUEST_MICROSERVICE_PORT: YOUR_MICROSERVICE_PORT
+      USER_MICROSERVICE_HOST: user-microservice #example: user-microservice (the docker service name)
+      USER_MICROSERVICE_PORT: 5002
+      GUEST_MICROSERVICE_HOST: guest-microservice
+      GUEST_MICROSERVICE_PORT: 5001
+      # JWT Configuration
+      Jwt__SecretKey: YourSuperSecretKeyThatIsAtLeast32CharactersLong!@#$%^&*()
+      Jwt__Issuer: UserMicroservice
+      Jwt__Audience: MicroservicesApp
+      Jwt__ExpirationMinutes: 60
     networks:
       - app-network
 

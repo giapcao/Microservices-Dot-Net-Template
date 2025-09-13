@@ -7,6 +7,7 @@ using Domain.Repositories;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
+using SharedLibrary.Authentication;
 
 namespace Application
 {
@@ -21,6 +22,9 @@ namespace Application
             services.AddAutoMapper(assembly);
             services.AddScoped(typeof(IPipelineBehavior<,>), typeof(ValidationPipelineBehavior<,>));
             services.AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
+            
+            // Authentication services
+            services.AddScoped<IJwtTokenService, JwtTokenService>();
             return services;
 
         }

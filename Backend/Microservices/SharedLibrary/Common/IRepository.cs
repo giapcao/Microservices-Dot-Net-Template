@@ -13,6 +13,7 @@ namespace SharedLibrary.Common
         Task<T> GetByIdAsync(Guid id, CancellationToken cancellationToken);
         Task<IEnumerable<T>> GetAllAsync(CancellationToken cancellationToken);
         Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken);
+        IQueryable<T> GetAll();
         void Update(T entity);
         Task DeleteByIdAsync(Guid id, CancellationToken cancellationToken);
         void Delete(T entity);

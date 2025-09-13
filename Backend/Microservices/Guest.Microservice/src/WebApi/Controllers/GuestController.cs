@@ -7,6 +7,7 @@ using Application.Guests.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using SharedLibrary.Common;
+using SharedLibrary.Attributes;
 
 namespace WebApi.Controllers
 {
@@ -18,6 +19,7 @@ namespace WebApi.Controllers
         }
 
         [HttpPost("create")]
+        [Authorize("Admin", "User")]
         public async Task<IActionResult> Create([FromBody] CreateGuestCommand request, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(request, cancellationToken);
@@ -29,6 +31,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("read")]
+        [Authorize("Admin", "User")]
         public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(new GetAllGuestsQuery(), cancellationToken);

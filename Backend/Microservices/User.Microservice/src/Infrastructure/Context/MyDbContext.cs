@@ -25,7 +25,13 @@ public partial class MyDbContext : DbContext
     public virtual DbSet<UserRole> UserRoles { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        => optionsBuilder.UseNpgsql("Name=DefaultConnection");
+    {
+        if (!optionsBuilder.IsConfigured)
+        {
+            var connectionString = "Host=pg-2-database25812.g.aivencloud.com;Port=19217;Database=defaultdb;Username=avnadmin;Password=AVNS_vsIotPLRrxJUhcJlM0m;SslMode=Require";
+            optionsBuilder.UseNpgsql(connectionString);
+        }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -73,7 +79,7 @@ public partial class MyDbContext : DbContext
                 .HasColumnName("user_id");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .HasColumnType("timestamp without time zone")
+                .HasColumnType("timestamp with time zone")
                 .HasColumnName("created_at");
             entity.Property(e => e.Email)
                 .HasMaxLength(100)
@@ -81,6 +87,15 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.Name)
                 .HasMaxLength(100)
                 .HasColumnName("name");
+            entity.Property(e => e.PasswordHash)
+                .HasMaxLength(255)
+                .HasColumnName("password_hash");
+            entity.Property(e => e.RefreshToken)
+                .HasMaxLength(255)
+                .HasColumnName("refresh_token");
+            entity.Property(e => e.RefreshTokenExpiry)
+                .HasColumnType("timestamp with time zone")
+                .HasColumnName("refresh_token_expiry");
         });
 
         modelBuilder.Entity<UserRole>(entity =>

@@ -12,7 +12,7 @@ namespace Infrastructure.Common
 {
     public class Repository<T> : IRepository<T> where T : class
     {
-        private readonly MyDbContext _context;
+        protected readonly MyDbContext _context;
         private readonly DbSet<T> _dbSet;
 
         public Repository(MyDbContext context)
@@ -73,6 +73,11 @@ namespace Infrastructure.Common
         public void DeleteRange(IEnumerable<T> entities)
         {
             _dbSet.RemoveRange(entities);
+        }
+
+        public IQueryable<T> GetAll()
+        {
+            return _dbSet.AsQueryable();
         }
     }
 }

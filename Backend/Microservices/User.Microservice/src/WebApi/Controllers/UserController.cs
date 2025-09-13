@@ -7,6 +7,8 @@ using Application.Users.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using SharedLibrary.Common;
+using SharedLibrary.Authentication;
+using SharedLibrary.Attributes;
 
 namespace WebApi.Controllers
 {
@@ -18,6 +20,7 @@ namespace WebApi.Controllers
         }
 
         [HttpPost("create")]
+        [AllowAnonymous]
         public async Task<IActionResult> Create([FromBody] CreateUserCommand request, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(request, cancellationToken);
@@ -28,7 +31,34 @@ namespace WebApi.Controllers
             return Ok(result);
         }
 
+        [HttpPost("login")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
+        {
+            var command = new LoginUserCommand(request.Email, request.Password);
+            var result = await _mediator.Send(command, cancellationToken);
+            if (result.IsFailure)
+            {
+                return HandleFailure(result);
+            }
+            return Ok(result);
+        }
+
+        [HttpPost("refresh-token")]
+        [AllowAnonymous]
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
+        {
+            var command = new RefreshTokenCommand(request.RefreshToken);
+            var result = await _mediator.Send(command, cancellationToken);
+            if (result.IsFailure)
+            {
+                return HandleFailure(result);
+            }
+            return Ok(result);
+        }
+
         [HttpGet("read")]
+        [Authorize("Admin", "User")]
         public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(new GetAllUsersQuery(), cancellationToken);

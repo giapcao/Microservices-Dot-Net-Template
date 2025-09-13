@@ -74,5 +74,10 @@ namespace Infrastructure.Common
         {
             _dbSet.RemoveRange(entities);
         }
+
+        public IQueryable<T> GetAll()
+        {
+            return _dbSet.AsQueryable();
+        }
     }
 }

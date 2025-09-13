@@ -7,6 +7,7 @@ using Application.Abstractions.Messaging;
 using AutoMapper;
 using Domain.Repositories;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Application.Users.Queries
 {
@@ -25,9 +26,12 @@ namespace Application.Users.Queries
 
         public async Task<Result<IEnumerable<GetUserResponse>>> Handle(GetAllUsersQuery request, CancellationToken cancellationToken)
         {
-            var users = await _userRepository.GetAllAsync(cancellationToken);
-            var userResponses = _mapper.Map<IEnumerable<GetUserResponse>>(users);
-            return Result.Success(userResponses);
+            var userResponses = await _userRepository
+                .GetAll()
+                .Select(u => new GetUserResponse(u.Name, u.Email))
+                .ToListAsync(cancellationToken);
+
+            return Result.Success(userResponses.AsEnumerable());
         }
     }
 }

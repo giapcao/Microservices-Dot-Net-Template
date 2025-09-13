@@ -4,6 +4,8 @@ using System.Collections;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using SharedLibrary.Authentication;
+using SharedLibrary.Middleware;
 
 DotNetEnv.Env.Load();
 
@@ -112,9 +114,15 @@ builder.Configuration
     .AddJsonFile(runtimeConfigPath, optional: false, reloadOnChange: true)
     .AddEnvironmentVariables();
 
+// Add authentication services
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+
 builder.Services.AddOcelot(builder.Configuration);
 
 var app = builder.Build();
+
+// Add JWT middleware
+app.UseMiddleware<JwtMiddleware>();
 
 // Short-circuit health endpoints BEFORE Ocelot so they don't go through Ocelot pipeline
 app.Use(async (context, next) =>

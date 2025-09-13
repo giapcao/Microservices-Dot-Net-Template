@@ -13,8 +13,14 @@ namespace Application.Common.Mapper
     {
         public AutoMapperProfile()
         {
-            CreateMap<CreateUserCommand, User>();
-            CreateMap<User, CreateUserCommand>();
+            CreateMap<CreateUserCommand, User>()
+                .ForMember(dest => dest.PasswordHash, opt => opt.Ignore())
+                .ForMember(dest => dest.RefreshToken, opt => opt.Ignore())
+                .ForMember(dest => dest.RefreshTokenExpiry, opt => opt.Ignore())
+                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => Guid.NewGuid()));
+            
+            CreateMap<User, CreateUserCommand>()
+                .ForMember(dest => dest.Password, opt => opt.Ignore());
 
             CreateMap<GetUserResponse, User>();
             CreateMap<User, GetUserResponse>();

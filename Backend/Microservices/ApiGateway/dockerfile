@@ -1,18 +1,18 @@
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /App
 
+# Copy solution file if it exists
 COPY Microservices.sln ./
 
+# Copy SharedLibrary
+COPY SharedLibrary/ ./SharedLibrary/
 
-# When docker-compose builds with context ./Microservices, the ApiGateway project
-# files live under ApiGateway/src inside that context.
-COPY ApiGateway/src/src.csproj ./ApiGateway/src/
+# Copy ApiGateway
+COPY ApiGateway/ ./ApiGateway/
 
-RUN dotnet restore ApiGateway/src/src.csproj
-
-COPY ApiGateway/src/ ./ApiGateway/src/
-
+# Restore and build
 WORKDIR /App/ApiGateway/src
+RUN dotnet restore
 RUN dotnet publish -c Release -o /App/out
 
 FROM mcr.microsoft.com/dotnet/aspnet:9.0

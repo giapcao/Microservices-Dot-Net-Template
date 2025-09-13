@@ -3,6 +3,7 @@ using Infrastructure;
 using Infrastructure.Context;
 using SharedLibrary.Utils;
 using SharedLibrary.Configs;
+using SharedLibrary.Middleware;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Serilog;
@@ -60,6 +61,9 @@ if (app.Environment.IsDevelopment())
 app.UseSerilogRequestLogging();
 
 app.UseHttpsRedirection();
+
+// Add JWT middleware before authorization
+app.UseMiddleware<JwtMiddleware>();
 
 app.UseAuthorization();
 

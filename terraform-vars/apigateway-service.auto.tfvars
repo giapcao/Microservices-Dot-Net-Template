@@ -21,7 +21,7 @@ services = {
 
     # ECS Container
     ecs_container_name_suffix          = "apigateway"
-    ecs_container_image_repository_url = "897279497116.dkr.ecr.us-east-1.amazonaws.com/your-ecr-repository"
+    ecs_container_image_repository_url = "897279497116.dkr.ecr.us-east-1.amazonaws.com/vkev-infrastructure-khanghv2406-ecr"
     ecs_container_image_tag            = "ApiGateway-latest"
     ecs_container_cpu                  = 120
     ecs_container_memory               = 120

@@ -23,8 +23,8 @@ services = {
     ecs_container_name_suffix          = "redis"
     ecs_container_image_repository_url = "redis"
     ecs_container_image_tag            = "alpine"
-    ecs_container_cpu                  = 120
-    ecs_container_memory               = 120
+    ecs_container_cpu                  = 160
+    ecs_container_memory               = 160
     ecs_container_essential            = true
     ecs_container_port_mappings = [
       { 

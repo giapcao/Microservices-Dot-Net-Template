@@ -70,8 +70,8 @@ module "ecs" {
   ecs_cluster_name = module.ec2.ecs_cluster_name
   desired_count    = 1
 
-  task_cpu    = 800
-  task_memory = 800
+  task_cpu    = 900
+  task_memory = 900
   alb_security_group_id = module.alb.alb_sg_id
   assign_public_ip      = false
 

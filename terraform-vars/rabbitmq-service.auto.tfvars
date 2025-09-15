@@ -23,8 +23,8 @@ services = {
     ecs_container_name_suffix          = "rabbitmq"
     ecs_container_image_repository_url = "rabbitmq"
     ecs_container_image_tag            = "3-management"
-    ecs_container_cpu                  = 150
-    ecs_container_memory               = 250
+    ecs_container_cpu                  = 200
+    ecs_container_memory               = 300
     ecs_container_essential            = true
     ecs_container_port_mappings = [
       {

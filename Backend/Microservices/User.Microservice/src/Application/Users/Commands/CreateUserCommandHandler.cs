@@ -54,13 +54,12 @@ namespace Application.Users.Commands
                 {
                     RoleId = Guid.NewGuid(),
                     RoleName = "User",
-                    CreatedAt = DateTimeExtensions.PostgreSqlNow
+                    CreatedAt = DateTimeExtensions.PostgreSqlUtcNow
                 };
                 await _roleRepository.AddAsync(userRole, cancellationToken);
             }
             
             await _userRepository.AddAsync(user, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
             
             // Assign default role to user
             var userRoleAssignment = new UserRole
@@ -70,7 +69,6 @@ namespace Application.Users.Commands
             };
             
             await _userRoleRepository.AddAsync(userRoleAssignment, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
             
             await _publishEndpoint.Publish(new UserCreatingSagaStart{
                 CorrelationId= Guid.NewGuid(),

@@ -11,6 +11,8 @@ using Infrastructure.Common;
 using MassTransit;
 using Application.Sagas;
 using Infrastructure.Context;
+using Infrastructure.Adapters;
+using SharedLibrary.Abstractions.UnitOfWork;
 
 namespace Infrastructure
 {
@@ -24,6 +26,7 @@ namespace Infrastructure
             services.AddScoped<IRoleRepository, RoleRepository>();
             services.AddScoped<IUserRoleRepository, UserRoleRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
+            services.AddScoped<ISaveChangesUnitOfWork, SaveChangesUnitOfWorkAdapter>();
             services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
             services.AddSingleton<EnvironmentConfig>();
             var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");

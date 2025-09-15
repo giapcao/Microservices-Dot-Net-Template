@@ -1,6 +1,7 @@
 namespace SharedLibrary.Authentication;
 
-public record LoginRequest(string Email, string Password);
+// Deprecated: use Application.Users.Commands.LoginUserCommand directly
+// public record LoginRequest(string Email, string Password);
 
 public record LoginResponse(
     string AccessToken, 
@@ -16,7 +17,8 @@ public record UserInfo(
     IEnumerable<string> Roles
 );
 
-public record RefreshTokenRequest(string RefreshToken);
+// Deprecated: use Application.Users.Commands.RefreshTokenCommand directly
+// public record RefreshTokenRequest(string RefreshToken);
 
 public record TokenValidationResult(
     bool IsValid,

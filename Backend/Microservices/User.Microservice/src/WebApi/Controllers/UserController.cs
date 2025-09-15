@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using SharedLibrary.Common;
 using SharedLibrary.Authentication;
 using SharedLibrary.Attributes;
+using SharedLibrary.Common.Commands;
 
 namespace WebApi.Controllers
 {
@@ -28,31 +29,44 @@ namespace WebApi.Controllers
             {
                 return HandleFailure(result);
             }
+            var commit = await _mediator.Send(new SaveChangesCommand(), cancellationToken);
+            if (commit.IsFailure)
+            {
+                return HandleFailure(commit);
+            }
             return Ok(result);
         }
 
         [HttpPost("login")]
         [AllowAnonymous]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
+        public async Task<IActionResult> Login([FromBody] LoginUserCommand command, CancellationToken cancellationToken)
         {
-            var command = new LoginUserCommand(request.Email, request.Password);
             var result = await _mediator.Send(command, cancellationToken);
             if (result.IsFailure)
             {
                 return HandleFailure(result);
+            }
+            var commit = await _mediator.Send(new SaveChangesCommand(), cancellationToken);
+            if (commit.IsFailure)
+            {
+                return HandleFailure(commit);
             }
             return Ok(result);
         }
 
         [HttpPost("refresh-token")]
         [AllowAnonymous]
-        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenCommand command, CancellationToken cancellationToken)
         {
-            var command = new RefreshTokenCommand(request.RefreshToken);
             var result = await _mediator.Send(command, cancellationToken);
             if (result.IsFailure)
             {
                 return HandleFailure(result);
+            }
+            var commit = await _mediator.Send(new SaveChangesCommand(), cancellationToken);
+            if (commit.IsFailure)
+            {
+                return HandleFailure(commit);
             }
             return Ok(result);
         }
@@ -66,7 +80,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("health")]
-        public async Task<IActionResult> Health()
+        public IActionResult Health()
         {
             return Ok();
         }

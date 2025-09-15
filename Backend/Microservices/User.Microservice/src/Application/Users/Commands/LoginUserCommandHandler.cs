@@ -58,12 +58,10 @@ public class LoginUserCommandHandler : IRequestHandler<LoginUserCommand, Result<
         user.RefreshToken = refreshToken;
         user.RefreshTokenExpiry = DateTimeExtensions.PostgreSqlUtcNow.AddDays(7); // timestamptz requires UTC
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
         var response = new LoginResponse(
             AccessToken: accessToken,
             RefreshToken: refreshToken,
-            ExpiresAt: DateTime.Now.AddMinutes(60), // client-facing info only
+            ExpiresAt: DateTimeExtensions.PostgreSqlUtcNow.AddMinutes(60), // client-facing info only
             User: new UserInfo(user.UserId, user.Name, user.Email, roles)
         );
 

@@ -8,6 +8,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using SharedLibrary.Authentication;
+using SharedLibrary.Common.Commands;
 
 namespace Application
 {
@@ -17,7 +18,11 @@ namespace Application
         {
             var assembly = typeof(DependencyInjection).Assembly;
 
-            services.AddMediatR(configuration => configuration.RegisterServicesFromAssembly(assembly));
+            services.AddMediatR(configuration =>
+            {
+                configuration.RegisterServicesFromAssembly(assembly);
+                configuration.RegisterServicesFromAssembly(typeof(SaveChangesCommandHandler).Assembly);
+            });
             services.AddValidatorsFromAssembly(assembly);
             services.AddAutoMapper(assembly);
             services.AddScoped(typeof(IPipelineBehavior<,>), typeof(ValidationPipelineBehavior<,>));

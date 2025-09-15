@@ -33,7 +33,7 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
             .ThenInclude(ur => ur.Role)
             .FirstOrDefaultAsync(u => u.RefreshToken == request.RefreshToken, cancellationToken);
 
-        if (user == null || user.RefreshTokenExpiry < DateTimeExtensions.PostgreSqlNow)
+        if (user == null || user.RefreshTokenExpiry < DateTimeExtensions.PostgreSqlUtcNow)
         {
             return Result.Failure<LoginResponse>(new Error("Auth.InvalidRefreshToken", "Invalid or expired refresh token"));
         }
@@ -47,10 +47,9 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
 
         // Update user with new refresh token
         user.RefreshToken = newRefreshToken;
-        user.RefreshTokenExpiry = DateTimeExtensions.PostgreSqlNow.AddDays(7);
+        user.RefreshTokenExpiry = DateTimeExtensions.PostgreSqlUtcNow.AddDays(7);
 
         _userRepository.Update(user);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         var response = new LoginResponse(
             AccessToken: accessToken,

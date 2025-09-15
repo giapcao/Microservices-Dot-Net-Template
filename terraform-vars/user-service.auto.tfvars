@@ -29,8 +29,8 @@ services = {
     ecs_container_name_suffix          = "microservice"
     ecs_container_image_repository_url = "897279497116.dkr.ecr.us-east-1.amazonaws.com/your-ecr-repository"
     ecs_container_image_tag            = "User.Microservice-latest"
-    ecs_container_cpu                  = 150
-    ecs_container_memory               = 150
+    ecs_container_cpu                  = 120
+    ecs_container_memory               = 120
     ecs_container_essential            = true
     ecs_container_port_mappings = [
       {

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using SharedLibrary.Common;
 
-namespace Application.Abstractions.UnitOfWork
+namespace SharedLibrary.Abstractions.UnitOfWork
 {
     public interface IUnitOfWork : IDisposable
     {

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using SharedLibrary.Common.ResponseModel;
 using MediatR;
 
-namespace Application.Abstractions.Messaging
+namespace SharedLibrary.Abstractions.Messaging
 {
     public interface IQuery<TResponse> : IRequest<Result<TResponse>>
     {

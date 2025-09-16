@@ -1,9 +1,8 @@
 using System.Threading;
 using System.Threading.Tasks;
-using Application.Abstractions.UnitOfWork;
 using SharedLibrary.Abstractions.UnitOfWork;
 
-namespace Infrastructure.Adapters
+namespace SharedLibrary.Adapters
 {
     public class SaveChangesUnitOfWorkAdapter : ISaveChangesUnitOfWork
     {
@@ -20,5 +19,3 @@ namespace Infrastructure.Adapters
         }
     }
 }
-
-

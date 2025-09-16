@@ -4,7 +4,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SharedLibrary.Authentication;
 using SharedLibrary.Common.ResponseModel;
-using Application.Abstractions.UnitOfWork;
+using SharedLibrary.Abstractions.UnitOfWork;
 using SharedLibrary.Extensions;
 
 namespace Application.Users.Commands;

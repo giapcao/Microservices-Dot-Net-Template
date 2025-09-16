@@ -5,9 +5,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Domain.Repositories;
 using Infrastructure.Repositories;
-using Application.Abstractions.UnitOfWork;
+using SharedLibrary.Abstractions.UnitOfWork;
 using SharedLibrary.Common;
 using Infrastructure.Common;
+using SharedLibrary.Adapters;
 using MassTransit;
 using Application.Consumers;
 
@@ -20,6 +21,7 @@ namespace Infrastructure
 
             services.AddScoped<IGuestRepository, GuestRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
+            services.AddScoped<ISaveChangesUnitOfWork, SaveChangesUnitOfWorkAdapter>();
             services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
             services.AddSingleton<EnvironmentConfig>();
             var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");

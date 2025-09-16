@@ -16,8 +16,13 @@ namespace Application
         public static IServiceCollection AddApplication(this IServiceCollection services)
         {
             var assembly = typeof(DependencyInjection).Assembly;
+            var sharedLibraryAssembly = typeof(SharedLibrary.Common.Commands.SaveChangesCommand).Assembly;
 
-            services.AddMediatR(configuration => configuration.RegisterServicesFromAssembly(assembly));
+            services.AddMediatR(configuration => 
+            {
+                configuration.RegisterServicesFromAssembly(assembly);
+                configuration.RegisterServicesFromAssembly(sharedLibraryAssembly);
+            });
             services.AddValidatorsFromAssembly(assembly);
             services.AddAutoMapper(assembly);
             services.AddScoped(typeof(IPipelineBehavior<,>), typeof(ValidationPipelineBehavior<,>));

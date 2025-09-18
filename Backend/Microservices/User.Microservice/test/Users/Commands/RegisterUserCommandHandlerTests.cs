@@ -12,13 +12,13 @@ using Moq;
 
 namespace test.Users.Commands
 {
-    public class CreateUserCommandHandlerTests
+    public class RegisterUserCommandHandlerTests
     {
         private readonly Mock<IUserRepository> _userRepositoryMock;
         private readonly Mock<IMapper> _mapperMock;
         private readonly Mock<IUnitOfWork> _unitOfWorkMock;
 
-        public CreateUserCommandHandlerTests()
+        public RegisterUserCommandHandlerTests()
         {
             _userRepositoryMock = new();
             _mapperMock = new();
@@ -28,8 +28,8 @@ namespace test.Users.Commands
         [Fact]
         public async Task Handle_Should_ReturnSuccessResult_When_UserNotExist()
         {
-            var command = new CreateUserCommand("test_user", "test_user_email");
-            var handler = new CreateUserCommandHandler(_userRepositoryMock.Object, _mapperMock.Object, _unitOfWorkMock.Object);
+            var command = new RegisterUserCommand("test_user", "test_user_email", "test_password");
+            var handler = new RegisterUserCommandHandler(_userRepositoryMock.Object, null, null, _mapperMock.Object, _unitOfWorkMock.Object, null, null);
             Result result = await handler.Handle(command,default);
             result.IsSuccess.Should().BeTrue();
         }

@@ -15,12 +15,12 @@ using SharedLibrary.Extensions;
 
 namespace Application.Users.Commands
 {
-    public sealed record CreateUserCommand(
+    public sealed record RegisterUserCommand(
         string Name,
         string Email,
         string Password
     ) : ICommand;
-    internal sealed class CreateUserCommandHandler : ICommandHandler<CreateUserCommand>
+    internal sealed class RegisterUserCommandHandler : ICommandHandler<RegisterUserCommand>
     {
         private readonly IUserRepository _userRepository;
         private readonly IRoleRepository _roleRepository;
@@ -30,7 +30,7 @@ namespace Application.Users.Commands
         private readonly IPasswordHasher _passwordHasher;
         private readonly IPublishEndpoint _publishEndpoint;
 
-        public CreateUserCommandHandler(IUserRepository userRepository, IRoleRepository roleRepository, IUserRoleRepository userRoleRepository, IMapper mapper, IUnitOfWork unitOfWork, IPasswordHasher passwordHasher, IPublishEndpoint publishEndpoint)
+        public RegisterUserCommandHandler(IUserRepository userRepository, IRoleRepository roleRepository, IUserRoleRepository userRoleRepository, IMapper mapper, IUnitOfWork unitOfWork, IPasswordHasher passwordHasher, IPublishEndpoint publishEndpoint)
         {
             _userRepository = userRepository;
             _roleRepository = roleRepository;
@@ -40,11 +40,12 @@ namespace Application.Users.Commands
             _passwordHasher = passwordHasher;
             _publishEndpoint = publishEndpoint;
         }
-        public async Task<Result> Handle(CreateUserCommand command, CancellationToken cancellationToken)
+        public async Task<Result> Handle(RegisterUserCommand command, CancellationToken cancellationToken)
         {
             var user = _mapper.Map<User>(command);
             user.PasswordHash = _passwordHasher.HashPassword(command.Password);
             user.CreatedAt = DateTimeExtensions.PostgreSqlUtcNow;
+            user.IsVerified = false; // Người dùng mới đăng ký chưa được xác minh
             
             // Find or create default "User" role
             var userRole = await _roleRepository.GetByNameAsync("User", cancellationToken);

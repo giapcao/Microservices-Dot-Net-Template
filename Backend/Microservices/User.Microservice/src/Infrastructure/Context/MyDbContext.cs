@@ -28,7 +28,13 @@ public partial class MyDbContext : DbContext
     {
         if (!optionsBuilder.IsConfigured)
         {
-            var connectionString = "Host=pg-2-database25812.g.aivencloud.com;Port=19217;Database=defaultdb;Username=avnadmin;Password=AVNS_vsIotPLRrxJUhcJlM0m;SslMode=Require";
+            var host = Environment.GetEnvironmentVariable("DATABASE_HOST") ?? "localhost";
+            var port = Environment.GetEnvironmentVariable("DATABASE_PORT") ?? "5432";
+            var database = Environment.GetEnvironmentVariable("DATABASE_NAME") ?? "userservice_db";
+            var username = Environment.GetEnvironmentVariable("DATABASE_USERNAME") ?? "postgres";
+            var password = Environment.GetEnvironmentVariable("DATABASE_PASSWORD") ?? "password";
+            var sslMode = Environment.GetEnvironmentVariable("DATABASE_SSLMODE") ?? "Prefer";
+            var connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password};SslMode={sslMode}";
             optionsBuilder.UseNpgsql(connectionString);
         }
     }
@@ -59,7 +65,7 @@ public partial class MyDbContext : DbContext
                 .HasColumnName("role_id");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .HasColumnType("timestamp without time zone")
+                .HasColumnType("timestamp with time zone")
                 .HasColumnName("created_at");
             entity.Property(e => e.RoleName)
                 .HasMaxLength(50)
@@ -96,6 +102,10 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.RefreshTokenExpiry)
                 .HasColumnType("timestamp with time zone")
                 .HasColumnName("refresh_token_expiry");
+
+            entity.Property(e => e.IsVerified)
+                .HasDefaultValue(false)
+                .HasColumnName("is_verified");
         });
 
         modelBuilder.Entity<UserRole>(entity =>
@@ -108,7 +118,7 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.RoleId).HasColumnName("role_id");
             entity.Property(e => e.AssignedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .HasColumnType("timestamp without time zone")
+                .HasColumnType("timestamp with time zone")
                 .HasColumnName("assigned_at");
 
             entity.HasOne(d => d.Role).WithMany(p => p.UserRoles)

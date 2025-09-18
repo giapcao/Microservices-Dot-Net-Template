@@ -20,9 +20,9 @@ namespace WebApi.Controllers
         {
         }
 
-        [HttpPost("create")]
+        [HttpPost("register")]
         [AllowAnonymous]
-        public async Task<IActionResult> Create([FromBody] CreateUserCommand request, CancellationToken cancellationToken)
+        public async Task<IActionResult> Register([FromBody] RegisterUserCommand request, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(request, cancellationToken);
             if (result.IsFailure)

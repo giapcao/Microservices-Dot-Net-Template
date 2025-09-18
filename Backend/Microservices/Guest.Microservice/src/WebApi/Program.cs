@@ -6,6 +6,7 @@ using SharedLibrary.Configs;
 using SharedLibrary.Middleware;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 
 string solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory())?.FullName ?? "";

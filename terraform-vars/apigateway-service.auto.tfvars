@@ -36,6 +36,7 @@ services = {
 
     # Environment Variables
     ecs_environment_variables = [
+      { name = "ENABLE_SWAGGER_UI", value = "true" },
       { name = "ASPNETCORE_ENVIRONMENT", value = "Production" },
       { name = "ASPNETCORE_URLS", value = "http://+:8080" },
       { name = "USER_MICROSERVICE_HOST", value = "localhost" },

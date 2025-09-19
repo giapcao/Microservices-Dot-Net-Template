@@ -1,3 +1,7 @@
+locals {
+  containers_nonsensitive = try(nonsensitive(var.containers), [])
+}
+
 resource "aws_cloudwatch_log_group" "ecs_logs" {
   name              = "/ecs/${var.project_name}"
   retention_in_days = var.log_retention_days
@@ -212,20 +216,19 @@ resource "aws_service_discovery_private_dns_namespace" "dns_ns" {
 }
 
 resource "aws_service_discovery_service" "discovery_services" {
-  for_each = {
-    # Create a discovery service for each container that has it enabled
-    for c in var.containers : c.name => c
-    if var.enable_service_discovery && lookup(c, "enable_service_discovery", false) && lookup(c, "service_discovery_port", null) != null
-  }
+  for_each = var.enable_service_discovery ? {
+    for c in local.containers_nonsensitive : c.name => c
+    if try(c.enable_service_discovery, false) && try(c.service_discovery_port, null) != null
+  } : {}
 
-  name = each.value.name # Cloud Map service name will be the container name
+  name = each.value.name
 
   dns_config {
-    namespace_id = aws_service_discovery_private_dns_namespace.dns_ns[0].id
-    routing_policy = "MULTIVALUE" # Appropriate for SRV records, resolves to multiple task IPs/ports
+    namespace_id   = aws_service_discovery_private_dns_namespace.dns_ns[0].id
+    routing_policy = "MULTIVALUE"
     dns_records {
       ttl  = 10
-      type = "A" # Use A records so standard clients resolve service names
+      type = "A"
     }
   }
 

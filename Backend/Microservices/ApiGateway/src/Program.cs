@@ -226,16 +226,6 @@ if (enableSwaggerUi || app.Environment.IsDevelopment())
             swaggerUi.ConfigObject.AdditionalItems["persistAuthorization"] = true;
         }
     );
-
-    app.MapGet("/", context =>
-    {
-        context.Response.Redirect("/swagger");
-        return Task.CompletedTask;
-    });
-}
-else
-{
-    app.MapGet("/", () => Results.Json(new { status = "ok" }));
 }
 
 app.UseWhen(ctx =>
@@ -243,6 +233,18 @@ app.UseWhen(ctx =>
     !ctx.Request.Path.StartsWithSegments("/health") &&
     !ctx.Request.Path.StartsWithSegments("/api/health"),
     branch => branch.UseMiddleware<JwtMiddleware>());
+
+bool uiEnabledNow = enableSwaggerUi || app.Environment.IsDevelopment();
+
+app.Use(async (ctx, next) =>
+{
+    if (uiEnabledNow && (ctx.Request.Path == "/" || string.IsNullOrEmpty(ctx.Request.Path)))
+    {
+        ctx.Response.Redirect("/swagger", permanent: false);
+        return;
+    }
+    await next();
+});
 
 await app.UseOcelot();
 app.Run();

@@ -226,6 +226,16 @@ if (enableSwaggerUi || app.Environment.IsDevelopment())
             swaggerUi.ConfigObject.AdditionalItems["persistAuthorization"] = true;
         }
     );
+
+    app.MapGet("/", context =>
+    {
+        context.Response.Redirect("/swagger");
+        return Task.CompletedTask;
+    });
+}
+else
+{
+    app.MapGet("/", () => Results.Json(new { status = "ok" }));
 }
 
 app.UseWhen(ctx =>

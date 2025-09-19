@@ -118,6 +118,7 @@ variable "services" {
     ecs_service_discovery_port = number # Port for service discovery registration
     depends_on                 = optional(list(string)) # Container names this depends on
   }))
+  sensitive = true
   default = {
     "guest" = {
       alb_target_group_port     = 5001

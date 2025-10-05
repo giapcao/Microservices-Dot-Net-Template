@@ -369,3 +369,4 @@ resource "aws_security_group_rule" "task_sg_intra_self" {
   security_group_id = aws_security_group.task_sg.id
   self              = true
 }
+

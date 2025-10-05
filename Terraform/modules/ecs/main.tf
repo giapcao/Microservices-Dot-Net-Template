@@ -228,7 +228,7 @@ resource "aws_ecs_task_definition" "this" {
 
 resource "aws_service_discovery_private_dns_namespace" "dns_ns" {
   count       = var.enable_service_discovery ? 1 : 0
-  name        = "${var.project_name}.local"
+  name        = var.service_discovery_domain
   vpc         = var.vpc_id
   description = "Service discovery namespace for ${var.project_name}"
   tags        = { Name = "${var.project_name}-dns-namespace" }

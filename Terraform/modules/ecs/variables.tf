@@ -56,6 +56,11 @@ variable "enable_service_discovery" {
   default     = false
 }
 
+variable "service_discovery_domain" {
+  description = "Fully qualified name for the private DNS namespace used by service discovery"
+  type        = string
+}
+
 variable "enable_auto_scaling" {
   description = "Create target-tracking scaling policies for the service when enabled globally or per-service."
   type        = bool

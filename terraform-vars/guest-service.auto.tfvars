@@ -39,11 +39,11 @@ services = {
       { name = "DATABASE_USERNAME", value = "avnadmin" },
       { name = "DATABASE_PASSWORD", value = "AVNS_iGi4kJJObNRnGdM6BTb" },
       { name = "ASPNETCORE_URLS", value = "http://+:5001" },
-      { name = "RABBITMQ_HOST", value = "core.vkev.local" },
+      { name = "RABBITMQ_HOST", value = "core.vkev.svc" },
       { name = "RABBITMQ_PORT", value = "5672" },
       { name = "RABBITMQ_USERNAME", value = "rabbitmq" },
       { name = "RABBITMQ_PASSWORD", value = "0Kg04Rq08!" },
-      { name = "REDIS_HOST", value = "core.vkev.local" },
+      { name = "REDIS_HOST", value = "core.vkev.svc" },
       { name = "REDIS_PASSWORD", value = "0Kg04Rs05!" },
       { name = "REDIS_PORT", value = "6379" },
       { name = "Jwt__SecretKey", value = "YourSuperSecretKeyThatIsAtLeast32CharactersLong!@#$%^&*()" },
@@ -64,3 +64,4 @@ services = {
     depends_on                 = []
   }
 }
+

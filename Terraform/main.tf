@@ -98,6 +98,7 @@ module "ecs" {
     ]
   }
 
+  service_discovery_domain = "${var.project_name}.${var.service_discovery_domain_suffix}"
   enable_auto_scaling      = var.enable_auto_scaling
   enable_service_discovery = var.enable_service_discovery
 

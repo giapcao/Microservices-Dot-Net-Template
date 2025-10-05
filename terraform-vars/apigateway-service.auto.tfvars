@@ -37,7 +37,7 @@ services = {
       { name = "ASPNETCORE_URLS", value = "http://+:8080" },
       { name = "USER_MICROSERVICE_HOST", value = "localhost" },
       { name = "USER_MICROSERVICE_PORT", value = "5002" },
-      { name = "GUEST_MICROSERVICE_HOST", value = "guest.vkev.local" },
+      { name = "GUEST_MICROSERVICE_HOST", value = "guest.vkev.svc" },
       { name = "GUEST_MICROSERVICE_PORT", value = "5001" },
       { name = "Jwt__SecretKey", value = "YourSuperSecretKeyThatIsAtLeast32CharactersLong!@#$%^&*()" },
       { name = "Jwt__Issuer", value = "UserMicroservice" },
@@ -57,3 +57,4 @@ services = {
     depends_on                 = ["user-microservice"]
   }
 }
+

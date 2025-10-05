@@ -63,6 +63,12 @@ variable "enable_service_discovery" {
   default     = false
 }
 
+variable "service_discovery_domain_suffix" {
+  description = "Suffix used to build the private DNS namespace for service discovery (e.g. ""svc"" => <project>.svc)"
+  type        = string
+  default     = "svc"
+}
+
 # Service Definitions Variable
 variable "services" {
   description = "Configuration for each microservice"
@@ -292,7 +298,7 @@ variable "services" {
         { name = "USER_MICROSERVICE_PORT", value = "5002" },
         { name = "DRIVER_MICROSERVICE_HOST", value = "localhost" },
         { name = "DRIVER_MICROSERVICE_PORT", value = "5001" },
-        { name = "BASE_URL", value = "http://apigateway.projectname.local:8080" },
+        { name = "BASE_URL", value = "http://apigateway.projectname.svc:8080" },
         { name = "RABBITMQ_HOST", value = "localhost" },
         { name = "RABBITMQ_PORT", value = "5672" },
         { name = "REDIS_HOST", value = "localhost" },

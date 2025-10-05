@@ -25,16 +25,6 @@ locals {
 
   any_service_discovery = length(local.service_names_with_discovery) > 0
 
-  service_dependency_pairs = length(var.service_dependencies) == 0 ? {} : merge([
-    for svc, deps in var.service_dependencies : {
-      for dep in deps :
-      "${svc}|${dep}" => {
-        service    = svc
-        dependency = dep
-      }
-    }
-  ]...)
-
   normalized_services = {
     for service_name, service in local.service_definitions_nonsensitive :
     service_name => {
@@ -316,9 +306,9 @@ resource "aws_ecs_service" "this" {
   tags = merge(
     { Name = "${var.project_name}-${each.key}-ecs-service" },
     {
-      for pair_key, pair in local.service_dependency_pairs :
-      "tf_dep_${pair_key}" => null_resource.service_dependency[pair_key].id
-      if pair.service == each.key
+      for dep in lookup(var.service_dependencies, each.key, []) :
+      "tf_dep_${dep}" => aws_ecs_service.this[dep].id
+      if dep != each.key
     }
   )
 
@@ -328,16 +318,6 @@ resource "aws_ecs_service" "this" {
   ]
 }
 
-resource "null_resource" "service_dependency" {
-  for_each = local.service_dependency_pairs
-
-  triggers = {
-    service               = each.value.service
-    dependency            = each.value.dependency
-    dependency_service_id = aws_ecs_service.this[each.value.dependency].id
-  }
-
-}
 
 resource "aws_appautoscaling_target" "ecs_target" {
   for_each = local.autoscaling_settings
@@ -396,3 +376,4 @@ resource "aws_security_group_rule" "task_sg_intra_self" {
   security_group_id = aws_security_group.task_sg.id
   self              = true
 }
+

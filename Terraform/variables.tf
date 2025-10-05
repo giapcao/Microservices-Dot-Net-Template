@@ -57,12 +57,6 @@ variable "enable_auto_scaling" {
   default     = false
 }
 
-variable "enable_service_discovery" {
-  description = "Enable service discovery for ECS services"
-  type        = bool
-  default     = false
-}
-
 variable "enable_service_connect" {
   description = "Enable ECS Service Connect across services"
   type        = bool
@@ -126,15 +120,13 @@ variable "services" {
       retries     = number
       startPeriod = number
     }))
-    ecs_service_discovery_port   = number                 # Port for service discovery registration
-    depends_on                   = optional(list(string)) # Container names this depends on
-    command                      = optional(list(string))
-    ecs_task_cpu                 = optional(number)
-    ecs_task_memory              = optional(number)
-    ecs_desired_count            = optional(number)
-    ecs_assign_public_ip         = optional(bool)
-    ecs_enable_service_discovery = optional(bool)
-    ecs_enable_auto_scaling      = optional(bool)
+    depends_on              = optional(list(string)) # Container names this depends on
+    command                 = optional(list(string))
+    ecs_task_cpu            = optional(number)
+    ecs_task_memory         = optional(number)
+    ecs_desired_count       = optional(number)
+    ecs_assign_public_ip    = optional(bool)
+    ecs_enable_auto_scaling = optional(bool)
   }))
   sensitive = true
   default = {
@@ -199,8 +191,7 @@ variable "services" {
         retries     = 3
         startPeriod = 0
       }
-      ecs_service_discovery_port = 5001
-      depends_on                 = ["redis", "rabbitmq"]
+      depends_on = ["redis", "rabbitmq"]
     },
     "user" = {
       alb_target_group_port     = 5002
@@ -263,8 +254,7 @@ variable "services" {
         retries     = 3
         startPeriod = 0
       }
-      ecs_service_discovery_port = 5002
-      depends_on                 = ["redis", "rabbitmq"]
+      depends_on = ["redis", "rabbitmq"]
     },
     "apigateway" = {
       alb_target_group_port     = 8080
@@ -316,8 +306,7 @@ variable "services" {
         retries     = 3
         startPeriod = 0
       }
-      ecs_service_discovery_port = 8080
-      depends_on                 = []
+      depends_on = []
     },
     "redis" = {
       alb_target_group_port     = 6379
@@ -360,8 +349,7 @@ variable "services" {
         retries     = 5
         startPeriod = 30
       }
-      ecs_service_discovery_port = 6379
-      depends_on                 = []
+      depends_on = []
     },
     "rabbitmq" = {
       alb_target_group_port     = 5672
@@ -409,8 +397,7 @@ variable "services" {
         retries     = 5
         startPeriod = 30
       }
-      ecs_service_discovery_port = 5672
-      depends_on                 = []
+      depends_on = []
     }
   }
 }

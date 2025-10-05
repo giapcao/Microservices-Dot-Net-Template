@@ -60,8 +60,6 @@ services = {
       retries     = 3
       startPeriod = 10
     }
-
-    ecs_service_discovery_port = 5001
-    depends_on                 = []
+    depends_on = []
   }
 }

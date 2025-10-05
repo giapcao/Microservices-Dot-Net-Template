@@ -50,12 +50,6 @@ variable "desired_count" {
   default     = 1
 }
 
-variable "enable_service_discovery" {
-  description = "Globally enable/disable Cloud Map namespace creation. Individual services and containers may override this."
-  type        = bool
-  default     = false
-}
-
 variable "enable_service_connect" {
   description = "Enable ECS Service Connect for services in this module"
   type        = bool
@@ -98,15 +92,6 @@ variable "enable_auto_scaling" {
   default     = false
 }
 
-variable "service_discovery_containers" {
-  description = "Optional Cloud Map registration config per ECS service"
-  type = map(list(object({
-    name = string
-    port = number
-  })))
-  default = {}
-}
-
 variable "autoscaling_settings" {
   description = "Optional autoscaling configuration per ECS service"
   type = map(object({
@@ -125,7 +110,6 @@ variable "service_definitions" {
     task_memory                        = optional(number)
     desired_count                      = optional(number)
     assign_public_ip                   = optional(bool)
-    enable_service_discovery           = optional(bool)
     enable_auto_scaling                = optional(bool)
     max_capacity                       = optional(number)
     min_capacity                       = optional(number)
@@ -159,9 +143,7 @@ variable "service_definitions" {
         retries     = optional(number, 3)
         startPeriod = optional(number, 60)
       }))
-      enable_service_discovery = optional(bool)
-      service_discovery_port   = optional(number)
-      depends_on               = optional(list(string))
+      depends_on = optional(list(string))
     }))
     placement_constraints = optional(list(object({
       type       = string

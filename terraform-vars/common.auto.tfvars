@@ -13,8 +13,6 @@ instance_type       = "t2.micro"
 associate_public_ip = true
 
 # ECS Global Settings
-enable_auto_scaling      = false
-enable_service_discovery = true
+enable_auto_scaling = false
 
 enable_service_connect = true
-

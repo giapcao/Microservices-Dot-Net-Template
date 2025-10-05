@@ -53,8 +53,6 @@ services = {
       retries     = 3
       startPeriod = 10
     }
-
-    ecs_service_discovery_port = 8080
-    depends_on                 = ["user-microservice"]
+    depends_on = ["user-microservice"]
   }
 }

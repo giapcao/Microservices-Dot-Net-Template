@@ -66,8 +66,6 @@ services = {
       retries     = 3
       startPeriod = 10
     }
-
-    ecs_service_discovery_port = 5002
-    depends_on                 = ["rabbit-mq", "redis"]
+    depends_on = ["rabbit-mq", "redis"]
   }
 }

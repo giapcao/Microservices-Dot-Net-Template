@@ -4,12 +4,6 @@ locals {
   service_name_map = { for name in var.service_names : name => name }
 
 
-  service_discovery_enabled_map = {
-    for service_name, containers in var.service_discovery_containers :
-    service_name => containers[0]
-    if var.enable_service_discovery && contains(var.service_names, service_name) && length(containers) > 0
-  }
-
   autoscaling_settings = {
     for service_name, cfg in var.autoscaling_settings :
     service_name => {
@@ -21,10 +15,6 @@ locals {
     if var.enable_auto_scaling && contains(var.service_names, service_name)
   }
 
-  service_names_with_discovery = keys(local.service_discovery_enabled_map)
-
-  any_service_discovery = length(local.service_names_with_discovery) > 0
-
   normalized_services = {
     for service_name, service in local.service_definitions_nonsensitive :
     service_name => {
@@ -32,7 +22,6 @@ locals {
       task_memory                        = lookup(service, "task_memory", sum([for c in service.containers : c.memory]))
       desired_count                      = lookup(service, "desired_count", var.desired_count)
       assign_public_ip                   = coalesce(lookup(service, "assign_public_ip", null), var.assign_public_ip)
-      enable_service_discovery           = coalesce(lookup(service, "enable_service_discovery", null), var.enable_service_discovery)
       enable_auto_scaling                = coalesce(lookup(service, "enable_auto_scaling", null), var.enable_auto_scaling)
       max_capacity                       = lookup(service, "max_capacity", var.max_capacity)
       min_capacity                       = lookup(service, "min_capacity", var.min_capacity)
@@ -46,17 +35,19 @@ locals {
         for container in service.containers : merge(
           container,
           {
-            environment_variables    = lookup(container, "environment_variables", [])
-            depends_on               = lookup(container, "depends_on", [])
-            enable_service_discovery = coalesce(lookup(container, "enable_service_discovery", null), false)
-            service_discovery_port   = lookup(container, "service_discovery_port", length(lookup(container, "port_mappings", [])) > 0 ? lookup(container, "port_mappings", [])[0].container_port : null)
-            essential                = lookup(container, "essential", true)
+            environment_variables = lookup(container, "environment_variables", [])
+            depends_on            = lookup(container, "depends_on", [])
+            essential             = lookup(container, "essential", true)
             port_mappings = [
-              for pm in lookup(container, "port_mappings", []) : {
-                container_port = pm.container_port
-                host_port      = lookup(pm, "host_port", pm.container_port)
-                protocol       = lookup(pm, "protocol", "tcp")
-              }
+              for pm in lookup(container, "port_mappings", []) : merge(
+                {
+                  container_port = pm.container_port
+                  host_port      = lookup(pm, "host_port", pm.container_port)
+                  protocol       = lookup(pm, "protocol", "tcp")
+                },
+                lookup(pm, "name", null) != null ? { name = pm.name } : {},
+                lookup(pm, "app_protocol", null) != null ? { app_protocol = pm.app_protocol } : {}
+              )
             ]
           }
         )
@@ -231,29 +222,11 @@ resource "aws_ecs_task_definition" "this" {
 }
 
 resource "aws_service_discovery_private_dns_namespace" "dns_ns" {
-  count       = var.enable_service_discovery ? 1 : 0
+  count       = var.enable_service_connect ? 1 : 0
   name        = var.service_discovery_domain
   vpc         = var.vpc_id
   description = "Service discovery namespace for ${var.project_name}"
   tags        = { Name = "${var.project_name}-dns-namespace" }
-}
-
-resource "aws_service_discovery_service" "discovery_services" {
-  for_each = local.service_discovery_enabled_map
-
-  name = each.key
-
-  dns_config {
-    namespace_id   = aws_service_discovery_private_dns_namespace.dns_ns[0].id
-    routing_policy = "MULTIVALUE"
-    dns_records {
-      ttl  = 10
-      type = "A"
-    }
-  }
-
-  description = "Service discovery for ${each.key} service in project ${var.project_name}"
-  tags        = { Name = "${var.project_name}-${each.key}-discovery" }
 }
 
 resource "aws_ecs_service" "this" {
@@ -283,13 +256,6 @@ resource "aws_ecs_service" "this" {
     }
   }
 
-  dynamic "service_registries" {
-    for_each = contains(keys(local.service_discovery_enabled_map), each.key) ? [local.service_discovery_enabled_map[each.key]] : []
-    content {
-      registry_arn   = aws_service_discovery_service.discovery_services[each.key].arn
-      container_name = service_registries.value.name
-    }
-  }
   dynamic "service_connect_configuration" {
     for_each = var.enable_service_connect ? [1] : []
     content {

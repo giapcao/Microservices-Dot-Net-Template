@@ -48,7 +48,3 @@ output "service_discovery_namespace_id" {
   value       = length(aws_service_discovery_private_dns_namespace.dns_ns) > 0 ? aws_service_discovery_private_dns_namespace.dns_ns[0].id : null
 }
 
-output "service_discovery_service_arns" {
-  description = "Map of ECS service logical names to their Cloud Map service ARNs"
-  value       = { for name, svc in aws_service_discovery_service.discovery_services : name => svc.arn }
-}

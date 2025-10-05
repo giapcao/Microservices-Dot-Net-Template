@@ -72,42 +72,22 @@ module "ec2" {
 module "ecs" {
   source = "./modules/ecs"
 
-  project_name          = var.project_name
-  aws_region            = var.aws_region
-  vpc_id                = module.vpc.vpc_id
-  vpc_cidr              = var.vpc_cidr
-  task_subnet_ids       = [module.vpc.private_subnet_id]
-  ecs_cluster_id        = module.ec2.ecs_cluster_arn
-  ecs_cluster_name      = module.ec2.ecs_cluster_name
-  alb_security_group_id = module.alb.alb_sg_id
-  assign_public_ip      = false
-  desired_count         = 1
-  service_names         = ["core", "guest"]
-  service_discovery_containers = {
-    core = [
-      {
-        name = "rabbit-mq"
-        port = 5672
-      },
-      {
-        name = "redis"
-        port = 6379
-      }
-    ]
-    guest = [
-      {
-        name = "guest-microservice"
-        port = 5001
-      }
-    ]
-  }
-
+  project_name             = var.project_name
+  aws_region               = var.aws_region
+  vpc_id                   = module.vpc.vpc_id
+  vpc_cidr                 = var.vpc_cidr
+  task_subnet_ids          = [module.vpc.private_subnet_id]
+  ecs_cluster_id           = module.ec2.ecs_cluster_arn
+  ecs_cluster_name         = module.ec2.ecs_cluster_name
+  alb_security_group_id    = module.alb.alb_sg_id
+  assign_public_ip         = false
+  desired_count            = 1
+  service_names            = ["core", "guest"]
   service_discovery_domain = "${var.project_name}.${var.service_discovery_domain_suffix}"
   service_dependencies = {
     guest = ["core"]
   }
   enable_auto_scaling       = var.enable_auto_scaling
-  enable_service_discovery  = var.enable_service_discovery
   enable_service_connect    = var.enable_service_connect
   service_connect_namespace = "${var.project_name}.${var.service_discovery_domain_suffix}"
   service_connect_services = {
@@ -131,11 +111,10 @@ module "ecs" {
 
   service_definitions = {
     core = {
-      task_cpu                 = 900
-      task_memory              = 900
-      desired_count            = 1
-      assign_public_ip         = false
-      enable_service_discovery = var.enable_service_discovery
+      task_cpu         = 900
+      task_memory      = 900
+      desired_count    = 1
+      assign_public_ip = false
       placement_constraints = [
         {
           type       = "memberOf"
@@ -161,9 +140,7 @@ module "ecs" {
             retries     = var.services["user"].ecs_container_health_check.retries
             startPeriod = var.services["user"].ecs_container_health_check.startPeriod
           }
-          enable_service_discovery = false
-          service_discovery_port   = var.services["user"].ecs_service_discovery_port
-          depends_on               = var.services["user"].depends_on
+          depends_on = var.services["user"].depends_on
         },
         {
           # API Gateway
@@ -182,9 +159,7 @@ module "ecs" {
             retries     = var.services["apigateway"].ecs_container_health_check.retries
             startPeriod = var.services["apigateway"].ecs_container_health_check.startPeriod
           }
-          enable_service_discovery = false
-          service_discovery_port   = var.services["apigateway"].ecs_service_discovery_port
-          depends_on               = var.services["apigateway"].depends_on
+          depends_on = var.services["apigateway"].depends_on
         },
         {
           # Redis
@@ -204,9 +179,7 @@ module "ecs" {
             retries     = var.services["redis"].ecs_container_health_check.retries
             startPeriod = var.services["redis"].ecs_container_health_check.startPeriod
           }
-          enable_service_discovery = true
-          service_discovery_port   = var.services["redis"].ecs_service_discovery_port
-          depends_on               = var.services["redis"].depends_on
+          depends_on = var.services["redis"].depends_on
         },
         {
           # RabbitMQ
@@ -225,9 +198,7 @@ module "ecs" {
             retries     = var.services["rabbitmq"].ecs_container_health_check.retries
             startPeriod = var.services["rabbitmq"].ecs_container_health_check.startPeriod
           }
-          enable_service_discovery = var.enable_service_discovery
-          service_discovery_port   = var.services["rabbitmq"].ecs_service_discovery_port
-          depends_on               = var.services["rabbitmq"].depends_on
+          depends_on = var.services["rabbitmq"].depends_on
         }
       ]
 
@@ -242,12 +213,11 @@ module "ecs" {
     }
 
     guest = {
-      task_cpu                 = 900
-      task_memory              = 900
-      desired_count            = 1
-      assign_public_ip         = false
-      enable_service_discovery = var.enable_service_discovery
-      enable_auto_scaling      = false
+      task_cpu            = 900
+      task_memory         = 900
+      desired_count       = 1
+      assign_public_ip    = false
+      enable_auto_scaling = false
       placement_constraints = [
         {
           type       = "memberOf"
@@ -272,9 +242,7 @@ module "ecs" {
             retries     = var.services["guest"].ecs_container_health_check.retries
             startPeriod = var.services["guest"].ecs_container_health_check.startPeriod
           }
-          enable_service_discovery = true
-          service_discovery_port   = var.services["guest"].ecs_service_discovery_port
-          depends_on               = []
+          depends_on = []
         }
       ]
 

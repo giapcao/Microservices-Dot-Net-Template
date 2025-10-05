@@ -88,6 +88,10 @@ module "ecs" {
       {
         name = "rabbit-mq"
         port = 5672
+      },
+      {
+        name = "redis"
+        port = 6379
       }
     ]
     guest = [
@@ -180,7 +184,7 @@ module "ecs" {
             retries     = var.services["redis"].ecs_container_health_check.retries
             startPeriod = var.services["redis"].ecs_container_health_check.startPeriod
           }
-          enable_service_discovery = false
+          enable_service_discovery = true
           service_discovery_port   = var.services["redis"].ecs_service_discovery_port
           depends_on               = var.services["redis"].depends_on
         },
@@ -262,3 +266,4 @@ module "ecs" {
 }
 
 ## CloudFront and Lambda@Edge modules removed
+

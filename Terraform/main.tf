@@ -86,8 +86,8 @@ module "ecs" {
   service_discovery_containers = {
     core = [
       {
-        name = "api-gateway"
-        port = 8080
+        name = "rabbit-mq"
+        port = 5672
       }
     ]
     guest = [

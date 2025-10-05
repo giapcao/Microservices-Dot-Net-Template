@@ -177,15 +177,22 @@ jobs:
           TF_VAR_project_name: ${{ env.PROJECT_NAME }}
           TF_VAR_aws_region: ${{ env.AWS_REGION }}
         run: |
+          set +e
           terraform plan -input=false -out=tfplan -detailed-exitcode
-        continue-on-error: true
+          exit_code=$?
+          set -e
 
-      - name: Plan Status Check
-        if: steps.plan.outcome == 'failure'
-        run: |
-          echo "Terraform plan failed!"
-          exit 1
+          echo "exitcode=$exit_code" >> "$GITHUB_OUTPUT"
+          if [ "$exit_code" -eq 1 ]; then
+            echo "Terraform plan failed!"
+            exit 1
+          fi
 
+          if [ "$exit_code" -eq 2 ]; then
+            echo "changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changes=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Show Plan
         working-directory: Terraform
         run: terraform show -no-color tfplan

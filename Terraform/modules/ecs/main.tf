@@ -25,6 +25,15 @@ locals {
 
   any_service_discovery = length(local.service_names_with_discovery) > 0
 
+  service_dependency_pairs = length(var.service_dependencies) == 0 ? {} : merge([
+    for svc, deps in var.service_dependencies : {
+      for dep in deps :
+      "${svc}|${dep}" => {
+        service    = svc
+        dependency = dep
+      }
+    }
+  ]...)
   normalized_services = {
     for service_name, service in local.service_definitions_nonsensitive :
     service_name => {
@@ -306,9 +315,9 @@ resource "aws_ecs_service" "this" {
   tags = merge(
     { Name = "${var.project_name}-${each.key}-ecs-service" },
     {
-      for idx, dep in lookup(var.service_dependencies, each.key, []) :
-      "tf_dep_${idx}" => aws_ecs_service.this[dep].id
-      if dep != each.key && contains(var.service_names, dep)
+      for pair_key, pair in local.service_dependency_pairs :
+      "tf_dep_${pair_key}" => null_resource.service_dependency[pair_key].id
+      if pair.service == each.key
     }
   )
 
@@ -316,6 +325,17 @@ resource "aws_ecs_service" "this" {
     aws_iam_role_policy_attachment.ecs_task_ecr_pull,
     aws_iam_role_policy_attachment.ecs_execution_managed
   ]
+}
+
+resource "null_resource" "service_dependency" {
+  for_each = local.service_dependency_pairs
+
+  triggers = {
+    service    = each.value.service
+    dependency = each.value.dependency
+  }
+
+  depends_on = [aws_ecs_service.this[each.value.dependency]]
 }
 
 resource "aws_appautoscaling_target" "ecs_target" {

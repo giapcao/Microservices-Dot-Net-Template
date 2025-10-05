@@ -66,6 +66,7 @@ variable "service_dependencies" {
   type        = map(list(string))
   default     = {}
 }
+
 variable "enable_auto_scaling" {
   description = "Create target-tracking scaling policies for the service when enabled globally or per-service."
   type        = bool

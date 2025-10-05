@@ -99,6 +99,9 @@ module "ecs" {
   }
 
   service_discovery_domain = "${var.project_name}.${var.service_discovery_domain_suffix}"
+  service_dependencies = {
+    guest = ["core"]
+  }
   enable_auto_scaling      = var.enable_auto_scaling
   enable_service_discovery = var.enable_service_discovery
 
@@ -259,7 +262,3 @@ module "ecs" {
 }
 
 ## CloudFront and Lambda@Edge modules removed
-
-
-
-

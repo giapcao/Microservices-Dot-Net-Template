@@ -305,10 +305,13 @@ resource "aws_ecs_service" "this" {
 
   tags = { Name = "${var.project_name}-${each.key}-ecs-service" }
 
-  depends_on = [
-    aws_iam_role_policy_attachment.ecs_task_ecr_pull,
-    aws_iam_role_policy_attachment.ecs_execution_managed
-  ]
+  depends_on = concat(
+    [
+      aws_iam_role_policy_attachment.ecs_task_ecr_pull,
+      aws_iam_role_policy_attachment.ecs_execution_managed
+    ],
+    [for dep in lookup(var.service_dependencies, each.key, []) : aws_ecs_service.this[dep]]
+  )
 }
 
 resource "aws_appautoscaling_target" "ecs_target" {
@@ -368,6 +371,3 @@ resource "aws_security_group_rule" "task_sg_intra_self" {
   security_group_id = aws_security_group.task_sg.id
   self              = true
 }
-
-
-

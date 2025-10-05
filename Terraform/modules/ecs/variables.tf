@@ -61,12 +61,6 @@ variable "service_discovery_domain" {
   type        = string
 }
 
-variable "service_dependencies" {
-  description = "Optional map of ECS services to the service names they depend on"
-  type        = map(list(string))
-  default     = {}
-}
-
 variable "enable_auto_scaling" {
   description = "Create target-tracking scaling policies for the service when enabled globally or per-service."
   type        = bool

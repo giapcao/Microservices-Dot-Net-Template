@@ -305,13 +305,14 @@ resource "aws_ecs_service" "this" {
 
   tags = { Name = "${var.project_name}-${each.key}-ecs-service" }
 
-  depends_on = concat(
-    [
-      aws_iam_role_policy_attachment.ecs_task_ecr_pull,
-      aws_iam_role_policy_attachment.ecs_execution_managed
-    ],
-    [for dep in lookup(var.service_dependencies, each.key, []) : aws_ecs_service.this[dep]]
-  )
+  depends_on = each.key == "guest" ? [
+    aws_iam_role_policy_attachment.ecs_task_ecr_pull,
+    aws_iam_role_policy_attachment.ecs_execution_managed,
+    aws_ecs_service.this["core"]
+    ] : [
+    aws_iam_role_policy_attachment.ecs_task_ecr_pull,
+    aws_iam_role_policy_attachment.ecs_execution_managed
+  ]
 }
 
 resource "aws_appautoscaling_target" "ecs_target" {

@@ -6,7 +6,7 @@ on:
       environment:
         description: "GitHub Environment to use."
         type: string
-        default: ghepxe-infrastructure
+        default: infrastructure-khanghv2406
         required: true
 
 env:

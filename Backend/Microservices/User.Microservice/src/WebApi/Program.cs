@@ -2,12 +2,15 @@ using Application;
 using Infrastructure;
 using Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models; // <<— for JWT in Swagger
 using Serilog;
 using SharedLibrary.Configs;
 using SharedLibrary.Middleware;
+using SharedLibrary.Migrations;
 using SharedLibrary.Utils;
 
 var solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory())?.FullName ?? "";
@@ -21,6 +24,15 @@ AutoScaffold.UpdateAppSettingsFile("appsettings.json", "default");
 AutoScaffold.UpdateAppSettingsFile("appsettings.Development.json", "default");
 
 var builder = WebApplication.CreateBuilder(args);
+const string AutoApplyMigrationsEnvVar = "AUTO_APPLY_MIGRATIONS";
+var autoApplySetting = Environment.GetEnvironmentVariable(AutoApplyMigrationsEnvVar);
+var shouldAutoApplyMigrations = bool.TryParse(autoApplySetting, out var parsedAutoApply) && parsedAutoApply;
+
+if (!shouldAutoApplyMigrations)
+{
+    builder.Services.Replace(ServiceDescriptor.Scoped<IMigrator, NoOpMigrator>());
+}
+
 var environment = builder.Environment;
 
 builder.Services.AddControllers();
@@ -89,6 +101,10 @@ builder.Services
 
 var app = builder.Build();
 
+if (!shouldAutoApplyMigrations)
+{
+    app.Logger.LogInformation("Automatic EF Core migrations are disabled. Set {EnvVar}=true to enable.", AutoApplyMigrationsEnvVar);
+}
 // Health check endpoints
 app.MapGet("/health", () => new { status = "ok" });
 app.MapGet("/api/health", () => new { status = "ok" });

@@ -18,7 +18,7 @@ services = {
     alb_listener_rule_conditions = []
 
     ecs_container_name_suffix          = "microservice"
-    ecs_container_image_repository_url = "897279497116.dkr.ecr.us-east-1.amazonaws.com/ghepxe-ghepxe-infrastructure-ecr"
+    ecs_container_image_repository_url = "897279497116.dkr.ecr.us-east-1.amazonaws.com/vkev-infrastructure-khanghv2406-ecr"
     ecs_container_image_tag            = "Guest.Microservice-latest"
     ecs_container_cpu                  = 120
     ecs_container_memory               = 120

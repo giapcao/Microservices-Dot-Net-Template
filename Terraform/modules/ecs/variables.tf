@@ -56,6 +56,31 @@ variable "enable_service_discovery" {
   default     = false
 }
 
+variable "enable_service_connect" {
+  description = "Enable ECS Service Connect for services in this module"
+  type        = bool
+  default     = false
+}
+
+variable "service_connect_namespace" {
+  description = "Cloud Map namespace to use for ECS Service Connect. Defaults to service discovery domain when unset."
+  type        = string
+  default     = null
+}
+
+variable "service_connect_services" {
+  description = "Optional Service Connect service definitions per ECS service"
+  type = map(list(object({
+    port_name             = string
+    discovery_name        = string
+    ingress_port_override = optional(number)
+    client_aliases = optional(list(object({
+      dns_name = string
+      port     = number
+    })), [])
+  })))
+  default = {}
+}
 variable "service_discovery_domain" {
   description = "Fully qualified name for the private DNS namespace used by service discovery"
   type        = string
@@ -120,6 +145,8 @@ variable "service_definitions" {
         container_port = number
         host_port      = optional(number)
         protocol       = optional(string)
+        name           = optional(string)
+        app_protocol   = optional(string)
       })), [])
       environment_variables = optional(list(object({
         name  = string
@@ -182,7 +209,3 @@ variable "memory_target_value" {
   type        = number
   default     = 70
 }
-
-
-
-

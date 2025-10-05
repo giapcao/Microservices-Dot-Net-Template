@@ -28,11 +28,13 @@ services = {
         container_port = 5672
         host_port      = 0
         protocol       = "tcp"
+        name           = "rabbitmq"
       },
       {
         container_port = 15672
         host_port      = 0
         protocol       = "tcp"
+        name           = "rabbitmq-mgmt"
       }
     ]
 

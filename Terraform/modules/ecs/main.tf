@@ -177,11 +177,15 @@ resource "aws_ecs_task_definition" "this" {
         essential = c.essential
 
         portMappings = [
-          for pm in c.port_mappings : {
-            containerPort = pm.container_port
-            hostPort      = pm.container_port
-            protocol      = pm.protocol
-          }
+          for pm in c.port_mappings : merge(
+            {
+              containerPort = pm.container_port
+              hostPort      = try(pm.host_port, pm.container_port)
+              protocol      = try(pm.protocol, "tcp")
+            },
+            try(pm.name, null) != null ? { name = pm.name } : {},
+            try(pm.app_protocol, null) != null ? { appProtocol = pm.app_protocol } : {}
+          )
         ]
 
         environment = [
@@ -284,10 +288,32 @@ resource "aws_ecs_service" "this" {
     content {
       registry_arn   = aws_service_discovery_service.discovery_services[each.key].arn
       container_name = service_registries.value.name
-      container_port = service_registries.value.port
     }
   }
+  dynamic "service_connect_configuration" {
+    for_each = var.enable_service_connect ? [1] : []
+    content {
+      enabled   = true
+      namespace = coalesce(var.service_connect_namespace, var.service_discovery_domain)
 
+      dynamic "service" {
+        for_each = lookup(var.service_connect_services, each.key, [])
+        content {
+          port_name             = service.value.port_name
+          discovery_name        = service.value.discovery_name
+          ingress_port_override = try(service.value.ingress_port_override, null)
+
+          dynamic "client_alias" {
+            for_each = try(service.value.client_aliases, [])
+            content {
+              dns_name = client_alias.value.dns_name
+              port     = client_alias.value.port
+            }
+          }
+        }
+      }
+    }
+  }
   dynamic "load_balancer" {
     for_each = local.normalized_services[each.key].target_groups
     content {
@@ -377,7 +403,3 @@ resource "aws_security_group_rule" "task_sg_intra_self" {
   security_group_id = aws_security_group.task_sg.id
   self              = true
 }
-
-
-
-

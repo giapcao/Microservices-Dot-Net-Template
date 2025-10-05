@@ -63,6 +63,11 @@ variable "enable_service_discovery" {
   default     = false
 }
 
+variable "enable_service_connect" {
+  description = "Enable ECS Service Connect across services"
+  type        = bool
+  default     = false
+}
 variable "service_discovery_domain_suffix" {
   description = "Suffix used to build the private DNS namespace for service discovery (e.g. \"svc\" => <project>.svc)"
   type        = string
@@ -409,4 +414,3 @@ variable "services" {
     }
   }
 }
-

@@ -34,6 +34,7 @@ services = {
         container_port = 5002
         host_port      = 0
         protocol       = "tcp"
+        name           = "user"
       }
     ]
 
@@ -70,4 +71,3 @@ services = {
     depends_on                 = ["rabbit-mq", "redis"]
   }
 }
-

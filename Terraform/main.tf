@@ -106,8 +106,28 @@ module "ecs" {
   service_dependencies = {
     guest = ["core"]
   }
-  enable_auto_scaling      = var.enable_auto_scaling
-  enable_service_discovery = var.enable_service_discovery
+  enable_auto_scaling       = var.enable_auto_scaling
+  enable_service_discovery  = var.enable_service_discovery
+  enable_service_connect    = var.enable_service_connect
+  service_connect_namespace = "${var.project_name}.${var.service_discovery_domain_suffix}"
+  service_connect_services = {
+    core = [
+      {
+        port_name      = "rabbitmq"
+        discovery_name = "rabbitmq"
+      },
+      {
+        port_name      = "redis"
+        discovery_name = "redis"
+      }
+    ]
+    guest = [
+      {
+        port_name      = "guest"
+        discovery_name = "guest-service"
+      }
+    ]
+  }
 
   service_definitions = {
     core = {
@@ -266,4 +286,3 @@ module "ecs" {
 }
 
 ## CloudFront and Lambda@Edge modules removed
-

@@ -28,6 +28,7 @@ services = {
         container_port = 6379
         host_port      = 0
         protocol       = "tcp"
+        name           = "redis"
       }
     ]
 

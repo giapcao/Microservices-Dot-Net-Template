@@ -20,8 +20,8 @@ services = {
     ecs_container_name_suffix          = "apigateway"
     ecs_container_image_repository_url = "897279497116.dkr.ecr.us-east-1.amazonaws.com/ghepxe-ghepxe-infrastructure-ecr"
     ecs_container_image_tag            = "ApiGateway-latest"
-    ecs_container_cpu                  = 256
-    ecs_container_memory               = 512
+    ecs_container_cpu                  = 120
+    ecs_container_memory               = 120
     ecs_container_essential            = true
     ecs_container_port_mappings = [
       {

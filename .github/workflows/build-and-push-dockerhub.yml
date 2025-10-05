@@ -1,4 +1,4 @@
-﻿name: Build and Push Microservices to Docker Hub
+name: Build and Push Microservices to Docker Hub
 
 on:
   workflow_dispatch:
@@ -88,7 +88,7 @@ jobs:
         env:
           DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USERNAME }}
 
-      - name: Normalize service name
+      - name: Normalize names
         run: |
           original="${{ matrix.service }}"
           normalized=$(echo "$original" | tr '[:upper:]' '[:lower:]')
@@ -97,8 +97,17 @@ jobs:
             echo "Failed to normalize service name '$original'" >&2
             exit 1
           fi
+          project_original="${PROJECT_NAME:-default}"
+          project_normalized=$(echo "$project_original" | tr '[:upper:]' '[:lower:]')
+          project_sanitized=$(echo "$project_normalized" | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')
+          if [ -z "$project_sanitized" ]; then
+            echo "Failed to normalize project name '$project_original'" >&2
+            exit 1
+          fi
           echo "SERVICE_NAME_LOWER=$sanitized" >> "$GITHUB_ENV"
+          echo "PROJECT_NAME_SLUG=$project_sanitized" >> "$GITHUB_ENV"
           echo "Normalized service name: $sanitized (from $original)"
+          echo "Normalized project name: $project_sanitized (from $project_original)"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -136,18 +145,18 @@ jobs:
             SERVICE_NAME=${{ matrix.service }}
           push: true
           tags: |
-            ${{ env.DOCKERHUB_NAMESPACE }}/${{ env.SERVICE_NAME_LOWER }}:latest
+            ${{ env.DOCKERHUB_NAMESPACE }}/${{ env.PROJECT_NAME_SLUG }}-${{ env.SERVICE_NAME_LOWER }}:latest
           cache-from: |
-            type=gha,scope=${{ env.SERVICE_NAME_LOWER }}
+            type=gha,scope=${{ env.PROJECT_NAME_SLUG }}-${{ env.SERVICE_NAME_LOWER }}
           cache-to: |
-            type=gha,mode=max,scope=${{ env.SERVICE_NAME_LOWER }}
+            type=gha,mode=max,scope=${{ env.PROJECT_NAME_SLUG }}-${{ env.SERVICE_NAME_LOWER }}
           platforms: linux/amd64
 
       - name: Summarize build
         run: |
           echo "### Build Summary for ${{ matrix.service }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Service**: ${{ matrix.service }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Normalized Repository**: ${{ env.DOCKERHUB_NAMESPACE }}/${{ env.SERVICE_NAME_LOWER }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Normalized Repository**: ${{ env.DOCKERHUB_NAMESPACE }}/${{ env.PROJECT_NAME_SLUG }}-${{ env.SERVICE_NAME_LOWER }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Tag**: \`${{ steps.set-tag.outputs.IMAGE_TAG }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -175,5 +184,6 @@ jobs:
           else
             echo "One or more builds failed. Check the job logs above for details." >> $GITHUB_STEP_SUMMARY
           fi
+
 
 

@@ -34,6 +34,7 @@ locals {
       }
     }
   ]...)
+
   normalized_services = {
     for service_name, service in local.service_definitions_nonsensitive :
     service_name => {
@@ -331,11 +332,11 @@ resource "null_resource" "service_dependency" {
   for_each = local.service_dependency_pairs
 
   triggers = {
-    service    = each.value.service
-    dependency = each.value.dependency
+    service               = each.value.service
+    dependency            = each.value.dependency
+    dependency_service_id = aws_ecs_service.this[each.value.dependency].id
   }
 
-  depends_on = [aws_ecs_service.this[each.value.dependency]]
 }
 
 resource "aws_appautoscaling_target" "ecs_target" {

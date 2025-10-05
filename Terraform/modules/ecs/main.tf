@@ -307,7 +307,7 @@ resource "aws_ecs_service" "this" {
     { Name = "${var.project_name}-${each.key}-ecs-service" },
     {
       for dep in lookup(var.service_dependencies, each.key, []) :
-      "tf_dep_${dep}" => aws_ecs_service.this[dep].id
+      "tf_dep_${dep}" => "${var.project_name}-${dep}"
       if dep != each.key
     }
   )

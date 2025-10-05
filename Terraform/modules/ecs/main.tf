@@ -6,7 +6,7 @@ locals {
 
   service_discovery_enabled_map = {
     for service_name, containers in var.service_discovery_containers :
-    service_name => containers
+    service_name => containers[0]
     if var.enable_service_discovery && contains(var.service_names, service_name) && length(containers) > 0
   }
 
@@ -280,7 +280,7 @@ resource "aws_ecs_service" "this" {
   }
 
   dynamic "service_registries" {
-    for_each = lookup(local.service_discovery_enabled_map, each.key, [])
+    for_each = contains(keys(local.service_discovery_enabled_map), each.key) ? [local.service_discovery_enabled_map[each.key]] : []
     content {
       registry_arn   = aws_service_discovery_service.discovery_services[each.key].arn
       container_name = service_registries.value.name
@@ -377,4 +377,7 @@ resource "aws_security_group_rule" "task_sg_intra_self" {
   security_group_id = aws_security_group.task_sg.id
   self              = true
 }
+
+
+
 

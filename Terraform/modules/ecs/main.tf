@@ -171,7 +171,7 @@ resource "aws_ecs_task_definition" "this" {
           for pm in c.port_mappings : merge(
             {
               containerPort = pm.container_port
-              hostPort      = try(pm.host_port, pm.container_port)
+              hostPort      = coalesce(try(pm.host_port == 0 ? null : pm.host_port, null), pm.container_port)
               protocol      = try(pm.protocol, "tcp")
             },
             try(pm.name, null) != null ? { name = pm.name } : {},

@@ -260,7 +260,7 @@ resource "aws_ecs_service" "this" {
     for_each = var.enable_service_connect ? [1] : []
     content {
       enabled   = true
-      namespace = coalesce(var.service_connect_namespace, var.service_discovery_domain)
+      namespace = var.service_connect_namespace != null ? var.service_connect_namespace : aws_service_discovery_private_dns_namespace.dns_ns[0].arn
 
       dynamic "service" {
         for_each = lookup(var.service_connect_services, each.key, [])
@@ -369,5 +369,7 @@ resource "aws_security_group_rule" "task_sg_intra_self" {
   security_group_id = aws_security_group.task_sg.id
   self              = true
 }
+
+
 
 

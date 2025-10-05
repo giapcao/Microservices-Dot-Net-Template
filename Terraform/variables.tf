@@ -64,7 +64,7 @@ variable "enable_service_discovery" {
 }
 
 variable "service_discovery_domain_suffix" {
-  description = "Suffix used to build the private DNS namespace for service discovery (e.g. ""svc"" => <project>.svc)"
+  description = "Suffix used to build the private DNS namespace for service discovery (e.g. \"svc\" => <project>.svc)"
   type        = string
   default     = "svc"
 }
@@ -409,3 +409,4 @@ variable "services" {
     }
   }
 }
+

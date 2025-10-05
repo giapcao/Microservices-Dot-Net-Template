@@ -84,7 +84,7 @@ variable "services" {
     })
 
     # ALB Listener Rule attributes
-    alb_listener_rule_priority   = number
+    alb_listener_rule_priority = number
     alb_listener_rule_conditions = list(object({
       path_pattern = optional(object({
         values = list(string)
@@ -101,8 +101,8 @@ variable "services" {
     ecs_container_essential            = bool
     ecs_container_port_mappings = list(object({
       container_port = number
-      host_port      = number
-      protocol       = string
+      host_port      = optional(number, 0)
+      protocol       = optional(string, "tcp")
     }))
     ecs_environment_variables = list(object({
       name  = string
@@ -115,18 +115,25 @@ variable "services" {
       retries     = number
       startPeriod = number
     }))
-    ecs_service_discovery_port = number # Port for service discovery registration
-    depends_on                 = optional(list(string)) # Container names this depends on
+    ecs_service_discovery_port   = number                 # Port for service discovery registration
+    depends_on                   = optional(list(string)) # Container names this depends on
+    command                      = optional(list(string))
+    ecs_task_cpu                 = optional(number)
+    ecs_task_memory              = optional(number)
+    ecs_desired_count            = optional(number)
+    ecs_assign_public_ip         = optional(bool)
+    ecs_enable_service_discovery = optional(bool)
+    ecs_enable_auto_scaling      = optional(bool)
   }))
   sensitive = true
   default = {
-    "guest" = {
+    "driver" = {
       alb_target_group_port     = 5001
       alb_target_group_protocol = "HTTP"
       alb_target_group_type     = "ip"
       alb_health_check = {
         enabled             = true
-        path                = "/api/guest/health"
+        path                = "/api/driver/health"
         port                = "traffic-port"
         protocol            = "HTTP"
         matcher             = "200"
@@ -139,13 +146,13 @@ variable "services" {
       alb_listener_rule_conditions = [
         {
           path_pattern = {
-            values = ["/api/guest/*"]
+            values = ["/api/driver/*"]
           }
         }
       ]
       ecs_container_name_suffix          = "microservice"
       ecs_container_image_repository_url = "your-account-id.dkr.ecr.us-east-1.amazonaws.com/your-ecr-repo"
-      ecs_container_image_tag            = "Guest.Microservice-latest"
+      ecs_container_image_tag            = "Driver.Microservice-latest"
       ecs_container_cpu                  = 100
       ecs_container_memory               = 128
       ecs_container_essential            = true
@@ -175,7 +182,7 @@ variable "services" {
         { name = "USER_MICROSERVICE_PORT", value = "5002" }
       ]
       ecs_container_health_check = {
-        command     = ["CMD-SHELL", "curl -f http://localhost:5001/api/guest/health || exit 1"]
+        command     = ["CMD-SHELL", "curl -f http://localhost:5001/api/driver/health || exit 1"]
         interval    = 30
         timeout     = 5
         retries     = 3
@@ -235,8 +242,8 @@ variable "services" {
         { name = "REDIS_HOST", value = "localhost" },
         { name = "REDIS_PASSWORD", value = "change-me-redis-password" },
         { name = "REDIS_PORT", value = "6379" },
-        { name = "GUEST_MICROSERVICE_HOST", value = "localhost" },
-        { name = "GUEST_MICROSERVICE_PORT", value = "5001" }
+        { name = "DRIVER_MICROSERVICE_HOST", value = "localhost" },
+        { name = "DRIVER_MICROSERVICE_PORT", value = "5001" }
       ]
       ecs_container_health_check = {
         command     = ["CMD-SHELL", "curl -f http://localhost:5002/api/user/health || exit 1"]
@@ -263,8 +270,8 @@ variable "services" {
         healthy_threshold   = 2
         unhealthy_threshold = 3
       }
-      alb_listener_rule_priority = 12
-      alb_listener_rule_conditions = []
+      alb_listener_rule_priority         = 12
+      alb_listener_rule_conditions       = []
       ecs_container_name_suffix          = "apigateway"
       ecs_container_image_repository_url = "your-account-id.dkr.ecr.us-east-1.amazonaws.com/your-ecr-repo"
       ecs_container_image_tag            = "ApiGateway-latest"
@@ -283,8 +290,8 @@ variable "services" {
         { name = "ASPNETCORE_URLS", value = "http://0.0.0.0:8080" },
         { name = "USER_MICROSERVICE_HOST", value = "localhost" },
         { name = "USER_MICROSERVICE_PORT", value = "5002" },
-        { name = "GUEST_MICROSERVICE_HOST", value = "localhost" },
-        { name = "GUEST_MICROSERVICE_PORT", value = "5001" },
+        { name = "DRIVER_MICROSERVICE_HOST", value = "localhost" },
+        { name = "DRIVER_MICROSERVICE_PORT", value = "5001" },
         { name = "BASE_URL", value = "http://apigateway.projectname.local:8080" },
         { name = "RABBITMQ_HOST", value = "localhost" },
         { name = "RABBITMQ_PORT", value = "5672" },
@@ -316,8 +323,8 @@ variable "services" {
         healthy_threshold   = 2
         unhealthy_threshold = 3
       }
-      alb_listener_rule_priority = 13
-      alb_listener_rule_conditions = []
+      alb_listener_rule_priority         = 13
+      alb_listener_rule_conditions       = []
       ecs_container_name_suffix          = "redis"
       ecs_container_image_repository_url = "redis"
       ecs_container_image_tag            = "alpine"
@@ -360,8 +367,8 @@ variable "services" {
         healthy_threshold   = 2
         unhealthy_threshold = 3
       }
-      alb_listener_rule_priority = 14
-      alb_listener_rule_conditions = []
+      alb_listener_rule_priority         = 14
+      alb_listener_rule_conditions       = []
       ecs_container_name_suffix          = "rabbitmq"
       ecs_container_image_repository_url = "rabbitmq"
       ecs_container_image_tag            = "3-management"

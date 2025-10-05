@@ -46,3 +46,16 @@ variable "alb_security_group_id" {
   description = "Security-group ID of the Application Load Balancer"
   type        = string
 }
+
+variable "container_instance_groups" {
+  description = "Map of ECS container instance groups keyed by name."
+  type = map(object({
+    instance_type       = optional(string)
+    root_volume_size    = optional(number)
+    associate_public_ip = optional(bool)
+    instance_attributes = optional(map(string))
+    tags                = optional(map(string))
+    user_data_extra     = optional(string)
+  }))
+  default = {}
+}

@@ -1,22 +1,23 @@
 # VPC Module
 module "vpc" {
-  source                = "./modules/vpc"
-  project_name          = var.project_name
-  vpc_cidr              = var.vpc_cidr
-  public_subnet_cidrs   = var.public_subnet_cidrs
-  public_subnet_count   = 2
-  private_subnet_cidr   = var.private_subnet_cidr
+  source              = "./modules/vpc"
+  project_name        = var.project_name
+  vpc_cidr            = var.vpc_cidr
+  public_subnet_cidrs = var.public_subnet_cidrs
+  public_subnet_count = 2
+  private_subnet_cidr = var.private_subnet_cidr
 }
 
 # ALB Module
 module "alb" {
-  source              = "./modules/alb"
-  project_name        = var.project_name
-  vpc_id              = module.vpc.vpc_id
-  public_subnet_ids   = module.vpc.public_subnet_ids
+  source            = "./modules/alb"
+  project_name      = var.project_name
+  vpc_id            = module.vpc.vpc_id
+  public_subnet_ids = module.vpc.public_subnet_ids
 
   target_groups_definition = [
-    { # API Gateway Target Group
+    {
+      # API Gateway Target Group
       name_suffix = "apigateway"
       port        = var.services["apigateway"].alb_target_group_port
       protocol    = var.services["apigateway"].alb_target_group_protocol
@@ -36,7 +37,7 @@ module "alb" {
   ]
 
   default_listener_action = {
-    type = "forward"
+    type                = "forward"
     target_group_suffix = "apigateway"
   }
 
@@ -53,6 +54,16 @@ module "ec2" {
   instance_type         = var.instance_type
   associate_public_ip   = var.associate_public_ip
   alb_security_group_id = module.alb.alb_sg_id
+  container_instance_groups = {
+    core = {
+      instance_attributes = { service_group = "core" }
+      tags                = { ServiceGroup = "core" }
+    }
+    guest = {
+      instance_attributes = { service_group = "guest" }
+      tags                = { ServiceGroup = "guest" }
+    }
+  }
 
   depends_on = [module.alb]
 }
@@ -61,136 +72,193 @@ module "ec2" {
 module "ecs" {
   source = "./modules/ecs"
 
-  project_name     = var.project_name
-  aws_region       = var.aws_region
-  vpc_id           = module.vpc.vpc_id
-  vpc_cidr         = var.vpc_cidr
-  task_subnet_ids  = [module.vpc.private_subnet_id]
-  ecs_cluster_id   = module.ec2.ecs_cluster_arn
-  ecs_cluster_name = module.ec2.ecs_cluster_name
-  desired_count    = 1
-
-  task_cpu    = 900
-  task_memory = 900
+  project_name          = var.project_name
+  aws_region            = var.aws_region
+  vpc_id                = module.vpc.vpc_id
+  vpc_cidr              = var.vpc_cidr
+  task_subnet_ids       = [module.vpc.private_subnet_id]
+  ecs_cluster_id        = module.ec2.ecs_cluster_arn
+  ecs_cluster_name      = module.ec2.ecs_cluster_name
   alb_security_group_id = module.alb.alb_sg_id
   assign_public_ip      = false
-
-  containers = [
-    { # Guest Container Definition
-      name                 = "guest-microservice"
-      image_repository_url = var.services["guest"].ecs_container_image_repository_url
-      image_tag            = var.services["guest"].ecs_container_image_tag
-      cpu                  = var.services["guest"].ecs_container_cpu
-      memory               = var.services["guest"].ecs_container_memory
-      essential            = var.services["guest"].ecs_container_essential
-      port_mappings        = var.services["guest"].ecs_container_port_mappings
-      environment_variables= var.services["guest"].ecs_environment_variables
-      health_check = {
-        command     = var.services["guest"].ecs_container_health_check.command
-        interval    = var.services["guest"].ecs_container_health_check.interval
-        timeout     = var.services["guest"].ecs_container_health_check.timeout
-        retries     = var.services["guest"].ecs_container_health_check.retries
-        startPeriod = var.services["guest"].ecs_container_health_check.startPeriod
+  desired_count         = 1
+  service_names         = ["core", "guest"]
+  service_discovery_containers = {
+    core = [
+      {
+        name = "api-gateway"
+        port = 8080
       }
-      enable_service_discovery = var.enable_service_discovery # Uses the global variable
-      service_discovery_port   = var.services["guest"].ecs_service_discovery_port
-      depends_on               = var.services["guest"].depends_on
-    },
-    { # User Container Definition
-      name                 = "user-microservice"
-      image_repository_url = var.services["user"].ecs_container_image_repository_url
-      image_tag            = var.services["user"].ecs_container_image_tag
-      cpu                  = var.services["user"].ecs_container_cpu
-      memory               = var.services["user"].ecs_container_memory
-      essential            = var.services["user"].ecs_container_essential
-      port_mappings        = var.services["user"].ecs_container_port_mappings
-      environment_variables= var.services["user"].ecs_environment_variables
-      health_check = {
-        command     = var.services["user"].ecs_container_health_check.command
-        interval    = var.services["user"].ecs_container_health_check.interval
-        timeout     = var.services["user"].ecs_container_health_check.timeout
-        retries     = var.services["user"].ecs_container_health_check.retries
-        startPeriod = var.services["user"].ecs_container_health_check.startPeriod
+    ]
+    guest = [
+      {
+        name = "guest-microservice"
+        port = 5001
       }
-      enable_service_discovery = var.enable_service_discovery # Uses the global variable
-      service_discovery_port   = var.services["user"].ecs_service_discovery_port
-      depends_on               = var.services["user"].depends_on
-    },
-    { # API Gateway
-      name                 = "apigateway"
-      image_repository_url = var.services["apigateway"].ecs_container_image_repository_url
-      image_tag            = var.services["apigateway"].ecs_container_image_tag
-      cpu                  = var.services["apigateway"].ecs_container_cpu
-      memory               = var.services["apigateway"].ecs_container_memory
-      essential            = var.services["apigateway"].ecs_container_essential
-      port_mappings        = var.services["apigateway"].ecs_container_port_mappings
-      environment_variables= var.services["apigateway"].ecs_environment_variables
-      health_check = {
-        command     = var.services["apigateway"].ecs_container_health_check.command
-        interval    = var.services["apigateway"].ecs_container_health_check.interval
-        timeout     = var.services["apigateway"].ecs_container_health_check.timeout
-        retries     = var.services["apigateway"].ecs_container_health_check.retries
-        startPeriod = var.services["apigateway"].ecs_container_health_check.startPeriod
-      }
-      enable_service_discovery = var.enable_service_discovery
-      service_discovery_port   = var.services["apigateway"].ecs_service_discovery_port
-      depends_on               = var.services["apigateway"].depends_on
-    },
-    { # Redis
-      name                 = "redis"
-      image_repository_url = var.services["redis"].ecs_container_image_repository_url
-      image_tag            = var.services["redis"].ecs_container_image_tag
-      cpu                  = var.services["redis"].ecs_container_cpu
-      memory               = var.services["redis"].ecs_container_memory
-      essential            = var.services["redis"].ecs_container_essential
-      port_mappings        = var.services["redis"].ecs_container_port_mappings
-      environment_variables= var.services["redis"].ecs_environment_variables
-      command              = lookup(var.services["redis"], "command", null)
-      health_check = {
-        command     = var.services["redis"].ecs_container_health_check.command
-        interval    = var.services["redis"].ecs_container_health_check.interval
-        timeout     = var.services["redis"].ecs_container_health_check.timeout
-        retries     = var.services["redis"].ecs_container_health_check.retries
-        startPeriod = var.services["redis"].ecs_container_health_check.startPeriod
-      }
-      enable_service_discovery = var.enable_service_discovery
-      service_discovery_port   = var.services["redis"].ecs_service_discovery_port
-      depends_on               = var.services["redis"].depends_on
-    },
-    { # RabbitMQ
-      name                 = "rabbitmq"
-      image_repository_url = var.services["rabbitmq"].ecs_container_image_repository_url
-      image_tag            = var.services["rabbitmq"].ecs_container_image_tag
-      cpu                  = var.services["rabbitmq"].ecs_container_cpu
-      memory               = var.services["rabbitmq"].ecs_container_memory
-      essential            = var.services["rabbitmq"].ecs_container_essential
-      port_mappings        = var.services["rabbitmq"].ecs_container_port_mappings
-      environment_variables= var.services["rabbitmq"].ecs_environment_variables
-      health_check = {
-        command     = var.services["rabbitmq"].ecs_container_health_check.command
-        interval    = var.services["rabbitmq"].ecs_container_health_check.interval
-        timeout     = var.services["rabbitmq"].ecs_container_health_check.timeout
-        retries     = var.services["rabbitmq"].ecs_container_health_check.retries
-        startPeriod = var.services["rabbitmq"].ecs_container_health_check.startPeriod
-      }
-      enable_service_discovery = var.enable_service_discovery
-      service_discovery_port   = var.services["rabbitmq"].ecs_service_discovery_port
-      depends_on               = var.services["rabbitmq"].depends_on
-    }
-  ]
-
-  target_groups = [
-    { # API Gateway to Target Group Mapping
-      target_group_arn = module.alb.target_group_arns_map["apigateway"]
-      container_name   = "apigateway"
-      container_port   = var.services["apigateway"].ecs_container_port_mappings[0].container_port
-    }
-  ]
+    ]
+  }
 
   enable_auto_scaling      = var.enable_auto_scaling
   enable_service_discovery = var.enable_service_discovery
+
+  service_definitions = {
+    core = {
+      task_cpu                 = 900
+      task_memory              = 900
+      desired_count            = 1
+      assign_public_ip         = false
+      enable_service_discovery = var.enable_service_discovery
+      placement_constraints = [
+        {
+          type       = "memberOf"
+          expression = "attribute:service_group == core"
+        }
+      ]
+
+      containers = [
+        {
+          # User Container Definition
+          name                  = "user-microservice"
+          image_repository_url  = var.services["user"].ecs_container_image_repository_url
+          image_tag             = var.services["user"].ecs_container_image_tag
+          cpu                   = var.services["user"].ecs_container_cpu
+          memory                = var.services["user"].ecs_container_memory
+          essential             = var.services["user"].ecs_container_essential
+          port_mappings         = var.services["user"].ecs_container_port_mappings
+          environment_variables = var.services["user"].ecs_environment_variables
+          health_check = {
+            command     = var.services["user"].ecs_container_health_check.command
+            interval    = var.services["user"].ecs_container_health_check.interval
+            timeout     = var.services["user"].ecs_container_health_check.timeout
+            retries     = var.services["user"].ecs_container_health_check.retries
+            startPeriod = var.services["user"].ecs_container_health_check.startPeriod
+          }
+          enable_service_discovery = false
+          service_discovery_port   = var.services["user"].ecs_service_discovery_port
+          depends_on               = var.services["user"].depends_on
+        },
+        {
+          # API Gateway
+          name                  = "api-gateway"
+          image_repository_url  = var.services["apigateway"].ecs_container_image_repository_url
+          image_tag             = var.services["apigateway"].ecs_container_image_tag
+          cpu                   = var.services["apigateway"].ecs_container_cpu
+          memory                = var.services["apigateway"].ecs_container_memory
+          essential             = var.services["apigateway"].ecs_container_essential
+          port_mappings         = var.services["apigateway"].ecs_container_port_mappings
+          environment_variables = var.services["apigateway"].ecs_environment_variables
+          health_check = {
+            command     = var.services["apigateway"].ecs_container_health_check.command
+            interval    = var.services["apigateway"].ecs_container_health_check.interval
+            timeout     = var.services["apigateway"].ecs_container_health_check.timeout
+            retries     = var.services["apigateway"].ecs_container_health_check.retries
+            startPeriod = var.services["apigateway"].ecs_container_health_check.startPeriod
+          }
+          enable_service_discovery = false
+          service_discovery_port   = var.services["apigateway"].ecs_service_discovery_port
+          depends_on               = var.services["apigateway"].depends_on
+        },
+        {
+          # Redis
+          name                  = "redis"
+          image_repository_url  = var.services["redis"].ecs_container_image_repository_url
+          image_tag             = var.services["redis"].ecs_container_image_tag
+          cpu                   = var.services["redis"].ecs_container_cpu
+          memory                = var.services["redis"].ecs_container_memory
+          essential             = var.services["redis"].ecs_container_essential
+          port_mappings         = var.services["redis"].ecs_container_port_mappings
+          environment_variables = var.services["redis"].ecs_environment_variables
+          command               = lookup(var.services["redis"], "command", null)
+          health_check = {
+            command     = var.services["redis"].ecs_container_health_check.command
+            interval    = var.services["redis"].ecs_container_health_check.interval
+            timeout     = var.services["redis"].ecs_container_health_check.timeout
+            retries     = var.services["redis"].ecs_container_health_check.retries
+            startPeriod = var.services["redis"].ecs_container_health_check.startPeriod
+          }
+          enable_service_discovery = false
+          service_discovery_port   = var.services["redis"].ecs_service_discovery_port
+          depends_on               = var.services["redis"].depends_on
+        },
+        {
+          # RabbitMQ
+          name                  = "rabbit-mq"
+          image_repository_url  = var.services["rabbitmq"].ecs_container_image_repository_url
+          image_tag             = var.services["rabbitmq"].ecs_container_image_tag
+          cpu                   = var.services["rabbitmq"].ecs_container_cpu
+          memory                = var.services["rabbitmq"].ecs_container_memory
+          essential             = var.services["rabbitmq"].ecs_container_essential
+          port_mappings         = var.services["rabbitmq"].ecs_container_port_mappings
+          environment_variables = var.services["rabbitmq"].ecs_environment_variables
+          health_check = {
+            command     = var.services["rabbitmq"].ecs_container_health_check.command
+            interval    = var.services["rabbitmq"].ecs_container_health_check.interval
+            timeout     = var.services["rabbitmq"].ecs_container_health_check.timeout
+            retries     = var.services["rabbitmq"].ecs_container_health_check.retries
+            startPeriod = var.services["rabbitmq"].ecs_container_health_check.startPeriod
+          }
+          enable_service_discovery = var.enable_service_discovery
+          service_discovery_port   = var.services["rabbitmq"].ecs_service_discovery_port
+          depends_on               = var.services["rabbitmq"].depends_on
+        }
+      ]
+
+      target_groups = [
+        {
+          # API Gateway to Target Group Mapping
+          target_group_arn = module.alb.target_group_arns_map["apigateway"]
+          container_name   = "api-gateway"
+          container_port   = var.services["apigateway"].ecs_container_port_mappings[0].container_port
+        }
+      ]
+    }
+
+    guest = {
+      task_cpu                 = 900
+      task_memory              = 900
+      desired_count            = 1
+      assign_public_ip         = false
+      enable_service_discovery = var.enable_service_discovery
+      enable_auto_scaling      = false
+      placement_constraints = [
+        {
+          type       = "memberOf"
+          expression = "attribute:service_group == guest"
+        }
+      ]
+
+      containers = [
+        {
+          name                  = "guest-microservice"
+          image_repository_url  = var.services["guest"].ecs_container_image_repository_url
+          image_tag             = var.services["guest"].ecs_container_image_tag
+          cpu                   = var.services["guest"].ecs_container_cpu
+          memory                = var.services["guest"].ecs_container_memory
+          essential             = var.services["guest"].ecs_container_essential
+          port_mappings         = var.services["guest"].ecs_container_port_mappings
+          environment_variables = var.services["guest"].ecs_environment_variables
+          health_check = {
+            command     = var.services["guest"].ecs_container_health_check.command
+            interval    = var.services["guest"].ecs_container_health_check.interval
+            timeout     = var.services["guest"].ecs_container_health_check.timeout
+            retries     = var.services["guest"].ecs_container_health_check.retries
+            startPeriod = var.services["guest"].ecs_container_health_check.startPeriod
+          }
+          enable_service_discovery = true
+          service_discovery_port   = var.services["guest"].ecs_service_discovery_port
+          depends_on               = []
+        }
+      ]
+
+      target_groups = []
+    }
+  }
 
   depends_on = [module.ec2]
 }
 
 ## CloudFront and Lambda@Edge modules removed
+
+
+
+

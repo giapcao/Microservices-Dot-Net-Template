@@ -1,12 +1,12 @@
 ##########################################################################
 # REQUIRED VARIABLES
-# var.project_name      – prefix for names/tags
-# var.vpc_id            – VPC where the instance will live
-# var.vpc_cidr          – e.g. "10.0.0.0/16"
-# var.subnet_id         – public (or private with NAT) subnet ID
-# var.instance_type     – e.g. "t3.small"
-# var.root_volume_size  – e.g. 30
-# var.associate_public_ip (bool) – default true
+# var.project_name      â€“ prefix for names/tags
+# var.vpc_id            â€“ VPC where the instance will live
+# var.vpc_cidr          â€“ e.g. "10.0.0.0/16"
+# var.subnet_id         â€“ public (or private with NAT) subnet ID
+# var.instance_type     â€“ e.g. "t3.small"
+# var.root_volume_size  â€“ e.g. 30
+# var.associate_public_ip (bool) â€“ default true
 ##########################################################################
 
 # Latest Amazon Linux 2 ECS-optimised AMI
@@ -38,7 +38,7 @@ resource "aws_security_group" "ec2_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # tighten in production
+    cidr_blocks = ["0.0.0.0/0"] # tighten in production
   }
 
   # dynamic ports for ALB/NLB + tasks running in bridge mode
@@ -78,8 +78,8 @@ resource "aws_iam_role" "ec2_role" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
       Principal = { Service = "ec2.amazonaws.com" }
     }]
   })
@@ -128,55 +128,77 @@ resource "aws_ecs_cluster" "main" {
 }
 
 #################################
-# USER-DATA – join the cluster
+# USER-DATA â€“ join the cluster
 #################################
 locals {
-  ecs_user_data = base64encode(<<-EOF
-    #!/bin/bash
-    echo 'ECS_CLUSTER=${aws_ecs_cluster.main.name}' >> /etc/ecs/ecs.config
-  EOF
-  )
+  requested_container_instance_groups = length(var.container_instance_groups) > 0 ? var.container_instance_groups : {
+    default = {
+      instance_type       = var.instance_type
+      root_volume_size    = var.root_volume_size
+      associate_public_ip = var.associate_public_ip
+      instance_attributes = {}
+      tags                = {}
+      user_data_extra     = ""
+    }
+  }
+
+  container_instance_groups = {
+    for name, cfg in local.requested_container_instance_groups :
+    name => {
+      instance_type       = coalesce(lookup(cfg, "instance_type", null), var.instance_type, "t3.small")
+      root_volume_size    = lookup(cfg, "root_volume_size", var.root_volume_size)
+      associate_public_ip = coalesce(lookup(cfg, "associate_public_ip", null), var.associate_public_ip, false)
+      instance_attributes = lookup(cfg, "instance_attributes", {})
+      tags                = lookup(cfg, "tags", {})
+      user_data_extra     = join("", compact([lookup(cfg, "user_data_extra", "")]))
+    }
+  }
+
+  ecs_user_data = {
+    for name, cfg in local.container_instance_groups :
+    name => templatefile("${path.module}/templates/ecs-user-data.sh.tftpl", {
+      cluster_name        = aws_ecs_cluster.main.name
+      instance_attributes = jsonencode(cfg.instance_attributes)
+      extra_user_data     = cfg.user_data_extra
+    })
+  }
 }
 
-#################################
-# EC2 CONTAINER INSTANCE
-#################################
 resource "aws_instance" "ecs_instance" {
-  ami                    = data.aws_ami.ecs_optimized.id
-  instance_type          = var.instance_type
-  subnet_id              = var.subnet_id
-  vpc_security_group_ids = [aws_security_group.ec2_sg.id]
-  key_name               = aws_key_pair.ec2_key.key_name
-  iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
-  user_data_base64       = local.ecs_user_data
+  for_each = local.container_instance_groups
 
-  monitoring   = true
-  ebs_optimized = var.instance_type != "t2.micro"
+  ami                         = data.aws_ami.ecs_optimized.id
+  instance_type               = each.value.instance_type
+  subnet_id                   = var.subnet_id
+  vpc_security_group_ids      = [aws_security_group.ec2_sg.id]
+  key_name                    = aws_key_pair.ec2_key.key_name
+  iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
+  user_data_base64            = base64encode(local.ecs_user_data[each.key])
+  monitoring                  = true
+  ebs_optimized               = each.value.instance_type != "t2.micro"
+  associate_public_ip_address = each.value.associate_public_ip
 
   root_block_device {
-    volume_size           = var.root_volume_size
+    volume_size           = each.value.root_volume_size
     volume_type           = "gp3"
     delete_on_termination = true
     encrypted             = true
-    tags                  = { Name = "${var.project_name}-ec2-root" }
+    tags                  = { Name = "${var.project_name}-${each.key}-ec2-root" }
   }
 
-  tags = {
-    Name              = "${var.project_name}-ecs-instance"
-    AmazonECSManaged  = "true"
-    Cluster           = aws_ecs_cluster.main.name
-  }
+  tags = merge({
+    Name             = "${var.project_name}-${each.key}-ecs-instance"
+    AmazonECSManaged = "true"
+    Cluster          = aws_ecs_cluster.main.name
+  }, each.value.tags)
 
   lifecycle { create_before_destroy = true }
 }
 
-#############################
-# OPTIONAL ELASTIC IP
-#############################
 resource "aws_eip" "ec2_eip" {
-  count    = var.associate_public_ip ? 1 : 0
-  instance = aws_instance.ecs_instance.id
+  for_each = { for name, cfg in local.container_instance_groups : name => cfg if cfg.associate_public_ip }
+
+  instance = aws_instance.ecs_instance[each.key].id
   domain   = "vpc"
 
-  tags = { Name = "${var.project_name}-ec2-eip" }
 }

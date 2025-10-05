@@ -44,75 +44,102 @@ variable "ecs_cluster_name" {
   type        = string
 }
 
-variable "task_cpu" {
-  description = "Total CPU units for the ECS task (e.g., 1024 for 1 vCPU)."
-  type        = number
-}
-
-variable "task_memory" {
-  description = "Total memory (in MiB) for the ECS task (e.g., 2048 for 2GB)."
-  type        = number
-}
-
-variable "containers" {
-  description = "A list of container definitions for the task."
-  type = list(object({
-    name                 = string
-    image_repository_url = string
-    image_tag            = string
-    cpu                  = number # CPU units for this container
-    memory               = number # Memory (MiB) for this container
-    essential            = optional(bool, true)
-    command              = optional(list(string))
-    port_mappings = list(object({
-      container_port = number
-      host_port      = optional(number, 0) # 0 for dynamic host port assignment
-      protocol       = optional(string, "tcp")
-    }))
-    environment_variables = optional(list(object({
-      name  = string
-      value = string
-    })), [])
-    health_check = optional(object({
-      command     = list(string)
-      interval    = optional(number, 30)
-      timeout     = optional(number, 5)
-      retries     = optional(number, 3)
-      startPeriod = optional(number, 60) # Time to ignore health check on startup
-    }))
-    enable_service_discovery = optional(bool, false)
-    service_discovery_port   = optional(number) # The containerPort to register with service discovery
-    depends_on               = optional(list(string), []) # Container names this container depends on
-  }))
-  default = []
-}
-
-variable "target_groups" {
-  description = "A list of load balancer target group configurations. Each object links a target group to a container and port."
-  type = list(object({
-    target_group_arn = string
-    container_name   = string # Name of the container (must match one in 'containers' variable)
-    container_port   = number # Port of the container to link with the target group
-  }))
-  default = []
-}
-
 variable "desired_count" {
-  description = "Number of tasks to keep running."
+  description = "Default number of tasks to keep running when not overridden per service."
   type        = number
   default     = 1
 }
 
 variable "enable_service_discovery" {
-  description = "Globally enable/disable Cloud Map namespace creation. Individual containers also need 'enable_service_discovery = true'."
+  description = "Globally enable/disable Cloud Map namespace creation. Individual services and containers may override this."
   type        = bool
   default     = false
 }
 
 variable "enable_auto_scaling" {
-  description = "Create target-tracking scaling policies for the service?"
+  description = "Create target-tracking scaling policies for the service when enabled globally or per-service."
   type        = bool
   default     = false
+}
+
+variable "service_discovery_containers" {
+  description = "Optional Cloud Map registration config per ECS service"
+  type = map(list(object({
+    name = string
+    port = number
+  })))
+  default = {}
+}
+
+variable "autoscaling_settings" {
+  description = "Optional autoscaling configuration per ECS service"
+  type = map(object({
+    max_capacity        = number
+    min_capacity        = number
+    cpu_target_value    = number
+    memory_target_value = number
+  }))
+  default = {}
+}
+
+variable "service_definitions" {
+  description = "Map of ECS services to create. Keys are used as suffixes for resource names and Cloud Map services."
+  type = map(object({
+    task_cpu                           = optional(number)
+    task_memory                        = optional(number)
+    desired_count                      = optional(number)
+    assign_public_ip                   = optional(bool)
+    enable_service_discovery           = optional(bool)
+    enable_auto_scaling                = optional(bool)
+    max_capacity                       = optional(number)
+    min_capacity                       = optional(number)
+    cpu_target_value                   = optional(number)
+    memory_target_value                = optional(number)
+    deployment_maximum_percent         = optional(number)
+    deployment_minimum_healthy_percent = optional(number)
+    containers = list(object({
+      name                 = string
+      image_repository_url = string
+      image_tag            = string
+      cpu                  = number
+      memory               = number
+      essential            = optional(bool, true)
+      command              = optional(list(string))
+      port_mappings = optional(list(object({
+        container_port = number
+        host_port      = optional(number)
+        protocol       = optional(string)
+      })), [])
+      environment_variables = optional(list(object({
+        name  = string
+        value = string
+      })), [])
+      health_check = optional(object({
+        command     = list(string)
+        interval    = optional(number, 30)
+        timeout     = optional(number, 5)
+        retries     = optional(number, 3)
+        startPeriod = optional(number, 60)
+      }))
+      enable_service_discovery = optional(bool)
+      service_discovery_port   = optional(number)
+      depends_on               = optional(list(string))
+    }))
+    placement_constraints = optional(list(object({
+      type       = string
+      expression = optional(string)
+    })), [])
+    target_groups = optional(list(object({
+      target_group_arn = string
+      container_name   = string
+      container_port   = number
+    })), [])
+  }))
+  default = {}
+}
+variable "service_names" {
+  description = "List of ECS service identifiers to create"
+  type        = list(string)
 }
 
 variable "log_retention_days" {
@@ -144,3 +171,7 @@ variable "memory_target_value" {
   type        = number
   default     = 70
 }
+
+
+
+

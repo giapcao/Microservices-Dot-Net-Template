@@ -24,29 +24,29 @@ output "vpc_cidr_block" {
 }
 
 # EC2 Outputs
-output "ec2_instance_id" {
-  description = "ID of the EC2 instance"
-  value       = module.ec2.instance_id
+output "ec2_instance_ids" {
+  description = "Map of ECS container instance IDs keyed by group name"
+  value       = module.ec2.instance_ids
 }
 
-output "ec2_public_ip" {
-  description = "Public IP address of the EC2 instance"
-  value       = module.ec2.instance_public_ip
+output "ec2_public_ips" {
+  description = "Map of public IP addresses for ECS container instances"
+  value       = module.ec2.instance_public_ips
 }
 
-output "ec2_private_ip" {
-  description = "Private IP address of the EC2 instance"
-  value       = module.ec2.instance_private_ip
+output "ec2_private_ips" {
+  description = "Map of private IP addresses for ECS container instances"
+  value       = module.ec2.instance_private_ips
 }
 
 output "ec2_public_dns" {
-  description = "Public DNS name of the EC2 instance"
+  description = "Map of public DNS names for ECS container instances"
   value       = module.ec2.instance_public_dns
 }
 
-output "elastic_ip" {
-  description = "Elastic IP address associated with the instance"
-  value       = module.ec2.elastic_ip
+output "ec2_elastic_ips" {
+  description = "Map of Elastic IPs attached to ECS container instances"
+  value       = module.ec2.elastic_ips
 }
 
 output "ecs_cluster_name" {

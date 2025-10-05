@@ -1,34 +1,29 @@
 #####################################################
 #   EC2 INSTANCE DETAILS
 #####################################################
-output "instance_id" {
-  description = "ID of the ECS container instance"
-  value       = aws_instance.ecs_instance.id
+output "instance_ids" {
+  description = "Map of ECS container instance IDs keyed by group name"
+  value       = { for name, inst in aws_instance.ecs_instance : name => inst.id }
 }
 
-output "instance_public_ip" {
-  description = "Public IPv4 address (if associated)"
-  value       = aws_instance.ecs_instance.public_ip
+output "instance_public_ips" {
+  description = "Map of public IPv4 addresses (if associated) keyed by group name"
+  value       = { for name, inst in aws_instance.ecs_instance : name => inst.public_ip }
 }
 
-output "instance_private_ip" {
-  description = "Private IPv4 address"
-  value       = aws_instance.ecs_instance.private_ip
+output "instance_private_ips" {
+  description = "Map of private IPv4 addresses keyed by group name"
+  value       = { for name, inst in aws_instance.ecs_instance : name => inst.private_ip }
 }
 
 output "instance_public_dns" {
-  description = "Public DNS name (if public IP associated)"
-  value       = aws_instance.ecs_instance.public_dns
+  description = "Map of public DNS names (if public IP associated) keyed by group name"
+  value       = { for name, inst in aws_instance.ecs_instance : name => inst.public_dns }
 }
 
-output "elastic_ip" {
-  description = "Elastic IP attached to the instance (null if disabled)"
-  value       = var.associate_public_ip ? aws_eip.ec2_eip[0].public_ip : null
-}
-
-output "security_group_id" {
-  description = "Security-group ID applied to the instance"
-  value       = aws_security_group.ec2_sg.id
+output "elastic_ips" {
+  description = "Map of Elastic IPs attached to instances (only for groups with associate_public_ip = true)"
+  value       = { for name, eip in aws_eip.ec2_eip : name => eip.public_ip }
 }
 
 #####################################################
@@ -53,7 +48,7 @@ output "ecs_cluster_arn" {
 #   IAM / ACCESS
 #####################################################
 output "iam_role_arn" {
-  description = "ARN of the IAM role attached to the instance"
+  description = "ARN of the IAM role attached to the instances"
   value       = aws_iam_role.ec2_role.arn
 }
 

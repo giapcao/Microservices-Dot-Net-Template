@@ -303,13 +303,16 @@ resource "aws_ecs_service" "this" {
     ignore_changes = [desired_count]
   }
 
-  tags = { Name = "${var.project_name}-${each.key}-ecs-service" }
+  tags = merge(
+    { Name = "${var.project_name}-${each.key}-ecs-service" },
+    {
+      for idx, dep in lookup(var.service_dependencies, each.key, []) :
+      "tf_dep_${idx}" => aws_ecs_service.this[dep].id
+      if dep != each.key && contains(var.service_names, dep)
+    }
+  )
 
-  depends_on = each.key == "guest" ? [
-    aws_iam_role_policy_attachment.ecs_task_ecr_pull,
-    aws_iam_role_policy_attachment.ecs_execution_managed,
-    aws_ecs_service.this["core"]
-    ] : [
+  depends_on = [
     aws_iam_role_policy_attachment.ecs_task_ecr_pull,
     aws_iam_role_policy_attachment.ecs_execution_managed
   ]

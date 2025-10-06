@@ -87,9 +87,8 @@ module "ecs" {
   service_dependencies = {
     guest = ["core"]
   }
-  enable_auto_scaling       = var.enable_auto_scaling
-  enable_service_connect    = var.enable_service_connect
-  service_connect_namespace = "${var.project_name}.${var.service_discovery_domain_suffix}"
+  enable_auto_scaling    = var.enable_auto_scaling
+  enable_service_connect = var.enable_service_connect
   service_connect_services = {
     core = [
       {
@@ -271,3 +270,4 @@ module "ecs" {
 }
 
 ## CloudFront and Lambda@Edge modules removed
+

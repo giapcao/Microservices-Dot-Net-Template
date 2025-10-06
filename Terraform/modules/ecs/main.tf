@@ -36,8 +36,11 @@ locals {
           container,
           {
             environment_variables = lookup(container, "environment_variables", [])
-            depends_on            = lookup(container, "depends_on", [])
-            essential             = lookup(container, "essential", true)
+            depends_on = [
+              for dep in lookup(container, "depends_on", []) : dep
+              if dep != container.name && contains([for c in service.containers : c.name], dep)
+            ]
+            essential = lookup(container, "essential", true)
             port_mappings = [
               for pm in lookup(container, "port_mappings", []) : merge(
                 {
@@ -369,13 +372,3 @@ resource "aws_security_group_rule" "task_sg_intra_self" {
   security_group_id = aws_security_group.task_sg.id
   self              = true
 }
-
-
-
-
-
-
-
-
-
-

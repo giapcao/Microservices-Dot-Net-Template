@@ -193,7 +193,7 @@ variable "services" {
         retries     = 3
         startPeriod = 0
       }
-      depends_on = ["redis", "rabbitmq"]
+      depends_on = []
     },
     "user" = {
       alb_target_group_port     = 5002
@@ -256,7 +256,7 @@ variable "services" {
         retries     = 3
         startPeriod = 0
       }
-      depends_on = ["redis", "rabbitmq"]
+      depends_on = []
     },
     "apigateway" = {
       alb_target_group_port     = 8080
@@ -403,6 +403,7 @@ variable "services" {
     }
   }
 }
+
 
 
 

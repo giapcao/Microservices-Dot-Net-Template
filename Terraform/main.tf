@@ -277,7 +277,7 @@ module "ecs" {
 
       containers = [
         {
-          name                  = "rabbit-mq"
+          name                  = "rabbitmq"
           image_repository_url  = var.services["rabbitmq"].ecs_container_image_repository_url
           image_tag             = var.services["rabbitmq"].ecs_container_image_tag
           cpu                   = var.services["rabbitmq"].ecs_container_cpu
@@ -304,3 +304,4 @@ module "ecs" {
 }
 
 ## CloudFront and Lambda@Edge modules removed
+

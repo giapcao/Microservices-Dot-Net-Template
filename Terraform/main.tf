@@ -95,20 +95,37 @@ module "ecs" {
       {
         port_name      = "rabbitmq"
         discovery_name = "rabbitmq"
+        client_aliases = [
+          {
+            dns_name = "rabbitmq"
+            port     = 5672
+          }
+        ]
       },
       {
         port_name      = "redis"
         discovery_name = "redis"
+        client_aliases = [
+          {
+            dns_name = "redis"
+            port     = 6379
+          }
+        ]
       }
     ]
     guest = [
       {
         port_name      = "guest"
         discovery_name = "guest-service"
+        client_aliases = [
+          {
+            dns_name = "guest-service"
+            port     = 5001
+          }
+        ]
       }
     ]
   }
-
   service_definitions = {
     core = {
       task_cpu         = 900

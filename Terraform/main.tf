@@ -3,6 +3,7 @@ locals {
   rabbitmq_fqdn          = "rabbitmq.${local.service_connect_domain}"
   redis_fqdn             = "redis.${local.service_connect_domain}"
   guest_service_fqdn     = "guest-service.${local.service_connect_domain}"
+  user_service_fqdn      = "user-service.${local.service_connect_domain}"
 }
 
 # VPC Module
@@ -99,6 +100,26 @@ module "ecs" {
   service_connect_services = {
     core = [
       {
+        port_name      = "apigateway"
+        discovery_name = "api-gateway"
+        client_aliases = [
+          {
+            dns_name = "api-gateway"
+            port     = var.services["apigateway"].ecs_container_port_mappings[0].container_port
+          }
+        ]
+      },
+      {
+        port_name      = "user"
+        discovery_name = "user-service"
+        client_aliases = [
+          {
+            dns_name = "user-service"
+            port     = var.services["user"].ecs_container_port_mappings[0].container_port
+          }
+        ]
+      },
+      {
         port_name      = "rabbitmq"
         discovery_name = "rabbitmq"
         client_aliases = [
@@ -149,13 +170,13 @@ module "ecs" {
       containers = [
         {
           # User Container Definition
-          name                  = "user-microservice"
-          image_repository_url  = var.services["user"].ecs_container_image_repository_url
-          image_tag             = var.services["user"].ecs_container_image_tag
-          cpu                   = var.services["user"].ecs_container_cpu
-          memory                = var.services["user"].ecs_container_memory
-          essential             = var.services["user"].ecs_container_essential
-          port_mappings         = var.services["user"].ecs_container_port_mappings
+          name                 = "user-microservice"
+          image_repository_url = var.services["user"].ecs_container_image_repository_url
+          image_tag            = var.services["user"].ecs_container_image_tag
+          cpu                  = var.services["user"].ecs_container_cpu
+          memory               = var.services["user"].ecs_container_memory
+          essential            = var.services["user"].ecs_container_essential
+          port_mappings        = var.services["user"].ecs_container_port_mappings
           environment_variables = [
             for env_var in var.services["user"].ecs_environment_variables :
             env_var.name == "RABBITMQ_HOST" ? { name = env_var.name, value = local.rabbitmq_fqdn } :
@@ -173,16 +194,17 @@ module "ecs" {
         },
         {
           # API Gateway
-          name                  = "api-gateway"
-          image_repository_url  = var.services["apigateway"].ecs_container_image_repository_url
-          image_tag             = var.services["apigateway"].ecs_container_image_tag
-          cpu                   = var.services["apigateway"].ecs_container_cpu
-          memory                = var.services["apigateway"].ecs_container_memory
-          essential             = var.services["apigateway"].ecs_container_essential
-          port_mappings         = var.services["apigateway"].ecs_container_port_mappings
+          name                 = "api-gateway"
+          image_repository_url = var.services["apigateway"].ecs_container_image_repository_url
+          image_tag            = var.services["apigateway"].ecs_container_image_tag
+          cpu                  = var.services["apigateway"].ecs_container_cpu
+          memory               = var.services["apigateway"].ecs_container_memory
+          essential            = var.services["apigateway"].ecs_container_essential
+          port_mappings        = var.services["apigateway"].ecs_container_port_mappings
           environment_variables = [
             for env_var in var.services["apigateway"].ecs_environment_variables :
             env_var.name == "GUEST_MICROSERVICE_HOST" ? { name = env_var.name, value = local.guest_service_fqdn } :
+            env_var.name == "USER_MICROSERVICE_HOST" ? { name = env_var.name, value = local.user_service_fqdn } :
             env_var
           ]
           health_check = {
@@ -260,13 +282,13 @@ module "ecs" {
 
       containers = [
         {
-          name                  = "guest-microservice"
-          image_repository_url  = var.services["guest"].ecs_container_image_repository_url
-          image_tag             = var.services["guest"].ecs_container_image_tag
-          cpu                   = var.services["guest"].ecs_container_cpu
-          memory                = var.services["guest"].ecs_container_memory
-          essential             = var.services["guest"].ecs_container_essential
-          port_mappings         = var.services["guest"].ecs_container_port_mappings
+          name                 = "guest-microservice"
+          image_repository_url = var.services["guest"].ecs_container_image_repository_url
+          image_tag            = var.services["guest"].ecs_container_image_tag
+          cpu                  = var.services["guest"].ecs_container_cpu
+          memory               = var.services["guest"].ecs_container_memory
+          essential            = var.services["guest"].ecs_container_essential
+          port_mappings        = var.services["guest"].ecs_container_port_mappings
           environment_variables = [
             for env_var in var.services["guest"].ecs_environment_variables :
             env_var.name == "RABBITMQ_HOST" ? { name = env_var.name, value = local.rabbitmq_fqdn } :

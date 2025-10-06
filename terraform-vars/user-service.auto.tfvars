@@ -66,6 +66,6 @@ services = {
       retries     = 3
       startPeriod = 10
     }
-    depends_on = []
+    depends_on = ["rabbitmq", "redis"]
   }
 }

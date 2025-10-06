@@ -1,9 +1,8 @@
 locals {
-  service_connect_domain = "${var.project_name}.${var.service_discovery_domain_suffix}"
-  rabbitmq_fqdn          = "rabbitmq.${local.service_connect_domain}"
-  redis_fqdn             = "redis.${local.service_connect_domain}"
-  guest_service_fqdn     = "guest-service.${local.service_connect_domain}"
-  user_service_fqdn      = "user-service.${local.service_connect_domain}"
+  rabbitmq_host      = "rabbitmq"
+  redis_host         = "redis"
+  guest_service_host = "guest-service"
+  user_service_host  = "user-service"
 }
 
 # VPC Module
@@ -179,8 +178,8 @@ module "ecs" {
           port_mappings        = var.services["user"].ecs_container_port_mappings
           environment_variables = [
             for env_var in var.services["user"].ecs_environment_variables :
-            env_var.name == "RABBITMQ_HOST" ? { name = env_var.name, value = local.rabbitmq_fqdn } :
-            env_var.name == "REDIS_HOST" ? { name = env_var.name, value = local.redis_fqdn } :
+            env_var.name == "RABBITMQ_HOST" ? { name = env_var.name, value = local.rabbitmq_host } :
+            env_var.name == "REDIS_HOST" ? { name = env_var.name, value = local.redis_host } :
             env_var
           ]
           health_check = {
@@ -203,8 +202,8 @@ module "ecs" {
           port_mappings        = var.services["apigateway"].ecs_container_port_mappings
           environment_variables = [
             for env_var in var.services["apigateway"].ecs_environment_variables :
-            env_var.name == "GUEST_MICROSERVICE_HOST" ? { name = env_var.name, value = local.guest_service_fqdn } :
-            env_var.name == "USER_MICROSERVICE_HOST" ? { name = env_var.name, value = local.user_service_fqdn } :
+            env_var.name == "GUEST_MICROSERVICE_HOST" ? { name = env_var.name, value = local.guest_service_host } :
+            env_var.name == "USER_MICROSERVICE_HOST" ? { name = env_var.name, value = local.user_service_host } :
             env_var
           ]
           health_check = {
@@ -291,8 +290,8 @@ module "ecs" {
           port_mappings        = var.services["guest"].ecs_container_port_mappings
           environment_variables = [
             for env_var in var.services["guest"].ecs_environment_variables :
-            env_var.name == "RABBITMQ_HOST" ? { name = env_var.name, value = local.rabbitmq_fqdn } :
-            env_var.name == "REDIS_HOST" ? { name = env_var.name, value = local.redis_fqdn } :
+            env_var.name == "RABBITMQ_HOST" ? { name = env_var.name, value = local.rabbitmq_host } :
+            env_var.name == "REDIS_HOST" ? { name = env_var.name, value = local.redis_host } :
             env_var
           ]
           health_check = {

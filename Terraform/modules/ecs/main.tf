@@ -58,6 +58,13 @@ locals {
     }
   }
 
+  service_dependency_map = {
+    for service_name in var.service_names :
+    service_name => [
+      for dep in lookup(var.service_dependencies, service_name, []) : dep
+      if dep != service_name && contains(var.service_names, dep)
+    ]
+  }
 
 }
 
@@ -308,13 +315,19 @@ resource "aws_ecs_service" "this" {
     }
   )
 
-  depends_on = [
-    aws_iam_role_policy_attachment.ecs_task_ecr_pull,
-    aws_iam_role_policy_attachment.ecs_execution_managed
-  ]
+  depends_on = concat(
+    [
+      aws_iam_role_policy_attachment.ecs_task_ecr_pull,
+      aws_iam_role_policy_attachment.ecs_execution_managed
+    ],
+    [
+      for dep in local.service_dependency_map[each.key] :
+      aws_ecs_service.this[dep]
+    ]
+  )
+
+
 }
-
-
 resource "aws_appautoscaling_target" "ecs_target" {
   for_each = local.autoscaling_settings
 

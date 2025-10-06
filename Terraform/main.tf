@@ -1,3 +1,10 @@
+locals {
+  service_connect_domain = "${var.project_name}.${var.service_discovery_domain_suffix}"
+  rabbitmq_fqdn          = "rabbitmq.${local.service_connect_domain}"
+  redis_fqdn             = "redis.${local.service_connect_domain}"
+  guest_service_fqdn     = "guest-service.${local.service_connect_domain}"
+}
+
 # VPC Module
 module "vpc" {
   source              = "./modules/vpc"
@@ -149,7 +156,12 @@ module "ecs" {
           memory                = var.services["user"].ecs_container_memory
           essential             = var.services["user"].ecs_container_essential
           port_mappings         = var.services["user"].ecs_container_port_mappings
-          environment_variables = var.services["user"].ecs_environment_variables
+          environment_variables = [
+            for env_var in var.services["user"].ecs_environment_variables :
+            env_var.name == "RABBITMQ_HOST" ? { name = env_var.name, value = local.rabbitmq_fqdn } :
+            env_var.name == "REDIS_HOST" ? { name = env_var.name, value = local.redis_fqdn } :
+            env_var
+          ]
           health_check = {
             command     = var.services["user"].ecs_container_health_check.command
             interval    = var.services["user"].ecs_container_health_check.interval
@@ -168,7 +180,11 @@ module "ecs" {
           memory                = var.services["apigateway"].ecs_container_memory
           essential             = var.services["apigateway"].ecs_container_essential
           port_mappings         = var.services["apigateway"].ecs_container_port_mappings
-          environment_variables = var.services["apigateway"].ecs_environment_variables
+          environment_variables = [
+            for env_var in var.services["apigateway"].ecs_environment_variables :
+            env_var.name == "GUEST_MICROSERVICE_HOST" ? { name = env_var.name, value = local.guest_service_fqdn } :
+            env_var
+          ]
           health_check = {
             command     = var.services["apigateway"].ecs_container_health_check.command
             interval    = var.services["apigateway"].ecs_container_health_check.interval
@@ -251,7 +267,12 @@ module "ecs" {
           memory                = var.services["guest"].ecs_container_memory
           essential             = var.services["guest"].ecs_container_essential
           port_mappings         = var.services["guest"].ecs_container_port_mappings
-          environment_variables = var.services["guest"].ecs_environment_variables
+          environment_variables = [
+            for env_var in var.services["guest"].ecs_environment_variables :
+            env_var.name == "RABBITMQ_HOST" ? { name = env_var.name, value = local.rabbitmq_fqdn } :
+            env_var.name == "REDIS_HOST" ? { name = env_var.name, value = local.redis_fqdn } :
+            env_var
+          ]
           health_check = {
             command     = var.services["guest"].ecs_container_health_check.command
             interval    = var.services["guest"].ecs_container_health_check.interval

@@ -108,6 +108,8 @@ variable "services" {
       container_port = number
       host_port      = optional(number, 0)
       protocol       = optional(string, "tcp")
+      name           = optional(string)
+      app_protocol   = optional(string)
     }))
     ecs_environment_variables = list(object({
       name  = string
@@ -401,4 +403,6 @@ variable "services" {
     }
   }
 }
+
+
 

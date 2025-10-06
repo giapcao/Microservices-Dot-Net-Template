@@ -145,8 +145,26 @@ module "ecs" {
         discovery_name = "guest-service"
         client_aliases = [
           {
-            dns_name = "guest-service"
+            dns_name = local.guest_service_host
             port     = 5001
+          }
+        ]
+      },
+      {
+        discovery_name = "rabbitmq"
+        client_aliases = [
+          {
+            dns_name = local.rabbitmq_host
+            port     = 5672
+          }
+        ]
+      },
+      {
+        discovery_name = "redis"
+        client_aliases = [
+          {
+            dns_name = local.redis_host
+            port     = 6379
           }
         ]
       }

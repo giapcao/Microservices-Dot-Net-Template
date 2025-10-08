@@ -181,7 +181,8 @@ resource "aws_ecs_service" "this" {
       dynamic "service" {
         for_each = lookup(var.service_connect_services, each.key, [])
         content {
-          port_name             = service.value.port_name
+          # port_name is optional - omit for client-only mode
+          port_name             = try(service.value.port_name, null)
           discovery_name        = service.value.discovery_name
           ingress_port_override = try(service.value.ingress_port_override, null)
 

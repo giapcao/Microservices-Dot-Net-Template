@@ -325,15 +325,11 @@ resource "aws_ecs_service" "this" {
     }
   )
 
-  depends_on = concat(
-    var.shared_execution_role_arn == null ? [
-      aws_iam_role_policy_attachment.ecs_task_ecr_pull[0],
-      aws_iam_role_policy_attachment.ecs_execution_managed[0]
-    ] : [],
-    var.enable_service_connect && var.service_connect_namespace == null ? [
-      aws_service_discovery_private_dns_namespace.dns_ns[0]
-    ] : []
-  )
+  depends_on = [
+    aws_iam_role_policy_attachment.ecs_task_ecr_pull,
+    aws_iam_role_policy_attachment.ecs_execution_managed,
+    aws_service_discovery_private_dns_namespace.dns_ns
+  ]
 
 }
 resource "aws_appautoscaling_target" "ecs_target" {

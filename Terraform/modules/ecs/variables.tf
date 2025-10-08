@@ -63,9 +63,9 @@ variable "service_connect_namespace" {
 }
 
 variable "service_connect_services" {
-  description = "Optional Service Connect service definitions per ECS service"
+  description = "Service Connect service definitions per ECS service (publishers only - consumers auto-discovered)"
   type = map(list(object({
-    port_name             = optional(string)  # Optional for client-only mode
+    port_name             = string  # Required - defines service to publish to namespace
     discovery_name        = string
     ingress_port_override = optional(number)
     client_aliases = optional(list(object({

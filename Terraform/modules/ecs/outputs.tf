@@ -25,22 +25,22 @@ output "task_definition_revisions" {
 
 output "cloudwatch_log_group_name" {
   description = "Name of the CloudWatch log group"
-  value       = aws_cloudwatch_log_group.ecs_logs.name
+  value       = local.log_group_name
 }
 
 output "cloudwatch_log_group_arn" {
-  description = "ARN of the CloudWatch log group"
-  value       = aws_cloudwatch_log_group.ecs_logs.arn
+  description = "ARN of the CloudWatch log group (if module-created)"
+  value       = length(aws_cloudwatch_log_group.ecs_logs) > 0 ? aws_cloudwatch_log_group.ecs_logs[0].arn : null
 }
 
 output "ecs_task_role_arn" {
   description = "ARN of the IAM role assumed by the tasks"
-  value       = aws_iam_role.ecs_task_role.arn
+  value       = local.task_role_arn
 }
 
 output "ecs_execution_role_arn" {
   description = "ARN of the IAM role used for ECS task execution"
-  value       = aws_iam_role.ecs_execution_role.arn
+  value       = local.execution_role_arn
 }
 
 output "service_discovery_namespace_id" {

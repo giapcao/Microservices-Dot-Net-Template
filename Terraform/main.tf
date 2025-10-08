@@ -75,6 +75,115 @@ module "ec2" {
   depends_on = [module.alb]
 }
 
+# Shared ECS Resources (created once, used by all services)
+resource "aws_cloudwatch_log_group" "ecs_logs" {
+  name              = "/ecs/${var.project_name}"
+  retention_in_days = 30
+  tags              = { Name = "${var.project_name}-ecs-logs" }
+}
+
+resource "aws_iam_role" "ecs_task_role" {
+  name = "${var.project_name}-ecs-task-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "ecs-tasks.amazonaws.com" }
+    }]
+  })
+  tags = { Name = "${var.project_name}-ecs-task-role" }
+}
+
+resource "aws_iam_role" "ecs_execution_role" {
+  name = "${var.project_name}-ecs-execution-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "ecs-tasks.amazonaws.com" }
+    }]
+  })
+  tags = { Name = "${var.project_name}-ecs-execution-role" }
+}
+
+resource "aws_iam_role_policy" "ecs_task_policy" {
+  name = "${var.project_name}-ecs-task-policy"
+  role = aws_iam_role.ecs_task_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["logs:CreateLogStream", "logs:PutLogEvents"]
+      Resource = "${aws_cloudwatch_log_group.ecs_logs.arn}:*"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_execution_managed" {
+  role       = aws_iam_role.ecs_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_task_ecr_pull" {
+  role       = aws_iam_role.ecs_task_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
+resource "aws_security_group" "ecs_task_sg" {
+  name_prefix = "${var.project_name}-ecs-task-sg-"
+  description = "Security group for ECS tasks (awsvpc)"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress {
+    description     = "Allow inbound from ALB"
+    from_port       = 0
+    to_port         = 65535
+    protocol        = "tcp"
+    security_groups = [module.alb.alb_sg_id]
+  }
+
+  ingress {
+    description = "Allow intra-VPC task-to-task"
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+  }
+
+  egress {
+    description = "All outbound"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = { Name = "${var.project_name}-ecs-task-sg" }
+}
+
+resource "aws_security_group_rule" "task_sg_intra_self" {
+  type              = "ingress"
+  description       = "Allow all traffic within ECS task SG"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  security_group_id = aws_security_group.ecs_task_sg.id
+  self              = true
+}
+
+resource "aws_service_discovery_private_dns_namespace" "ecs_namespace" {
+  count       = var.enable_service_connect ? 1 : 0
+  name        = "${var.project_name}.${var.service_discovery_domain_suffix}"
+  vpc         = module.vpc.vpc_id
+  description = "Service discovery namespace for ${var.project_name}"
+  tags        = { Name = "${var.project_name}-dns-namespace" }
+}
+
 # ECS Module - Core Services
 module "ecs_core" {
   source = "./modules/ecs"
@@ -94,6 +203,14 @@ module "ecs_core" {
   service_dependencies     = {}
   enable_auto_scaling      = var.enable_auto_scaling
   enable_service_connect   = var.enable_service_connect
+  
+  # Pass shared resources
+  shared_log_group_name     = aws_cloudwatch_log_group.ecs_logs.name
+  shared_task_role_arn      = aws_iam_role.ecs_task_role.arn
+  shared_execution_role_arn = aws_iam_role.ecs_execution_role.arn
+  shared_task_sg_id         = aws_security_group.ecs_task_sg.id
+  service_connect_namespace = var.enable_service_connect ? aws_service_discovery_private_dns_namespace.ecs_namespace[0].arn : null
+
   service_connect_services = {
     core = [
       {
@@ -271,8 +388,15 @@ module "ecs_guest" {
   service_dependencies     = {}
   enable_auto_scaling      = var.enable_auto_scaling
   enable_service_connect   = var.enable_service_connect
-  # Use existing namespace from core service
-  service_connect_namespace = module.ecs_core.service_discovery_namespace_arn
+  
+  # Pass shared resources (same as core)
+  shared_log_group_name     = aws_cloudwatch_log_group.ecs_logs.name
+  shared_task_role_arn      = aws_iam_role.ecs_task_role.arn
+  shared_execution_role_arn = aws_iam_role.ecs_execution_role.arn
+  shared_task_sg_id         = aws_security_group.ecs_task_sg.id
+  # Use existing namespace created above
+  service_connect_namespace = var.enable_service_connect ? aws_service_discovery_private_dns_namespace.ecs_namespace[0].arn : null
+
   service_connect_services = {
     guest = [
       {

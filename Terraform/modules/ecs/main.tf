@@ -3,6 +3,11 @@ locals {
 
   service_name_map = { for name in var.service_names : name => name }
 
+  # Use shared resources if provided, otherwise reference module-created resources
+  log_group_name     = var.shared_log_group_name != null ? var.shared_log_group_name : "/ecs/${var.project_name}"
+  task_role_arn      = var.shared_task_role_arn != null ? var.shared_task_role_arn : (length(aws_iam_role.ecs_task_role) > 0 ? aws_iam_role.ecs_task_role[0].arn : null)
+  execution_role_arn = var.shared_execution_role_arn != null ? var.shared_execution_role_arn : (length(aws_iam_role.ecs_execution_role) > 0 ? aws_iam_role.ecs_execution_role[0].arn : null)
+  task_sg_id         = var.shared_task_sg_id != null ? var.shared_task_sg_id : (length(aws_security_group.task_sg) > 0 ? aws_security_group.task_sg[0].id : null)
 
   autoscaling_settings = {
     for service_name, cfg in var.autoscaling_settings :
@@ -62,13 +67,15 @@ locals {
 }
 
 resource "aws_cloudwatch_log_group" "ecs_logs" {
+  count             = var.shared_log_group_name == null ? 1 : 0
   name              = "/ecs/${var.project_name}"
   retention_in_days = var.log_retention_days
   tags              = { Name = "${var.project_name}-ecs-logs" }
 }
 
 resource "aws_iam_role" "ecs_task_role" {
-  name = "${var.project_name}-ecs-task-role"
+  count = var.shared_task_role_arn == null ? 1 : 0
+  name  = "${var.project_name}-ecs-task-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -82,7 +89,8 @@ resource "aws_iam_role" "ecs_task_role" {
 }
 
 resource "aws_iam_role" "ecs_execution_role" {
-  name = "${var.project_name}-ecs-execution-role"
+  count = var.shared_execution_role_arn == null ? 1 : 0
+  name  = "${var.project_name}-ecs-execution-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -96,30 +104,34 @@ resource "aws_iam_role" "ecs_execution_role" {
 }
 
 resource "aws_iam_role_policy" "ecs_task_policy" {
-  name = "${var.project_name}-ecs-task-policy"
-  role = aws_iam_role.ecs_task_role.id
+  count = var.shared_task_role_arn == null ? 1 : 0
+  name  = "${var.project_name}-ecs-task-policy"
+  role  = aws_iam_role.ecs_task_role[0].id
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
       Effect   = "Allow"
       Action   = ["logs:CreateLogStream", "logs:PutLogEvents"]
-      Resource = "${aws_cloudwatch_log_group.ecs_logs.arn}:*"
+      Resource = "arn:aws:logs:${var.aws_region}:*:log-group:${local.log_group_name}:*"
     }]
   })
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_execution_managed" {
-  role       = aws_iam_role.ecs_execution_role.name
+  count      = var.shared_execution_role_arn == null ? 1 : 0
+  role       = aws_iam_role.ecs_execution_role[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_ecr_pull" {
-  role       = aws_iam_role.ecs_task_role.name
+  count      = var.shared_task_role_arn == null ? 1 : 0
+  role       = aws_iam_role.ecs_task_role[0].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
 resource "aws_security_group" "task_sg" {
+  count       = var.shared_task_sg_id == null ? 1 : 0
   name_prefix = "${var.project_name}-ecs-task-sg-"
   description = "Security group for ECS tasks (awsvpc)"
   vpc_id      = var.vpc_id
@@ -147,6 +159,8 @@ resource "aws_security_group" "task_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = { Name = "${var.project_name}-ecs-task-sg" }
 }
 
 resource "aws_ecs_task_definition" "this" {
@@ -158,8 +172,8 @@ resource "aws_ecs_task_definition" "this" {
   cpu                      = tostring(local.normalized_services[each.key].task_cpu)
   memory                   = tostring(local.normalized_services[each.key].task_memory)
 
-  task_role_arn      = aws_iam_role.ecs_task_role.arn
-  execution_role_arn = aws_iam_role.ecs_execution_role.arn
+  task_role_arn      = local.task_role_arn
+  execution_role_arn = local.execution_role_arn
 
   container_definitions = jsonencode([
     for c in local.normalized_services[each.key].containers : merge(
@@ -192,7 +206,7 @@ resource "aws_ecs_task_definition" "this" {
         logConfiguration = {
           logDriver = "awslogs"
           options = {
-            awslogs-group         = aws_cloudwatch_log_group.ecs_logs.name
+            awslogs-group         = local.log_group_name
             awslogs-region        = var.aws_region
             awslogs-stream-prefix = "ecs/${c.name}"
           }
@@ -225,7 +239,7 @@ resource "aws_ecs_task_definition" "this" {
 }
 
 resource "aws_service_discovery_private_dns_namespace" "dns_ns" {
-  count       = var.enable_service_connect ? 1 : 0
+  count       = var.enable_service_connect && var.service_connect_namespace == null ? 1 : 0
   name        = var.service_discovery_domain
   vpc         = var.vpc_id
   description = "Service discovery namespace for ${var.project_name}"
@@ -244,7 +258,7 @@ resource "aws_ecs_service" "this" {
   network_configuration {
     assign_public_ip = local.normalized_services[each.key].assign_public_ip
     subnets          = var.task_subnet_ids
-    security_groups  = [aws_security_group.task_sg.id]
+    security_groups  = [local.task_sg_id]
   }
 
   ordered_placement_strategy {
@@ -262,8 +276,11 @@ resource "aws_ecs_service" "this" {
   dynamic "service_connect_configuration" {
     for_each = var.enable_service_connect ? [1] : []
     content {
-      enabled   = true
-      namespace = var.service_connect_namespace != null ? var.service_connect_namespace : aws_service_discovery_private_dns_namespace.dns_ns[0].arn
+      enabled = true
+      namespace = (
+        var.service_connect_namespace != null ? var.service_connect_namespace :
+        (length(aws_service_discovery_private_dns_namespace.dns_ns) > 0 ? aws_service_discovery_private_dns_namespace.dns_ns[0].arn : null)
+      )
 
       dynamic "service" {
         for_each = lookup(var.service_connect_services, each.key, [])
@@ -308,10 +325,15 @@ resource "aws_ecs_service" "this" {
     }
   )
 
-  depends_on = [
-    aws_iam_role_policy_attachment.ecs_task_ecr_pull,
-    aws_iam_role_policy_attachment.ecs_execution_managed
-  ]
+  depends_on = concat(
+    var.shared_execution_role_arn == null ? [
+      aws_iam_role_policy_attachment.ecs_task_ecr_pull[0],
+      aws_iam_role_policy_attachment.ecs_execution_managed[0]
+    ] : [],
+    var.enable_service_connect && var.service_connect_namespace == null ? [
+      aws_service_discovery_private_dns_namespace.dns_ns[0]
+    ] : []
+  )
 
 }
 resource "aws_appautoscaling_target" "ecs_target" {
@@ -363,11 +385,12 @@ resource "aws_appautoscaling_policy" "ecs_memory_policy" {
 }
 
 resource "aws_security_group_rule" "task_sg_intra_self" {
+  count             = var.shared_task_sg_id == null ? 1 : 0
   type              = "ingress"
   description       = "Allow all traffic within ECS task SG"
   from_port         = 0
   to_port           = 0
   protocol          = "-1"
-  security_group_id = aws_security_group.task_sg.id
+  security_group_id = aws_security_group.task_sg[0].id
   self              = true
 }

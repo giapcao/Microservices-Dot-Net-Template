@@ -369,7 +369,8 @@ module "ecs_core" {
   depends_on = [module.ec2]
 }
 
-# ECS Module - Guest Services (depends on core to ensure RabbitMQ/Redis are ready)
+# ECS Module - Guest Services  
+# Deploys in parallel with core - Service Connect handles auto-discovery
 module "ecs_guest" {
   source = "./modules/ecs"
 
@@ -454,7 +455,7 @@ module "ecs_guest" {
     }
   }
 
-  depends_on = [module.ecs_core]
+  depends_on = [module.ec2]
 }
 
 ## CloudFront and Lambda@Edge modules removed

@@ -48,3 +48,8 @@ output "service_discovery_namespace_id" {
   value       = length(aws_service_discovery_private_dns_namespace.dns_ns) > 0 ? aws_service_discovery_private_dns_namespace.dns_ns[0].id : null
 }
 
+output "service_discovery_namespace_arn" {
+  description = "ARN of the Cloud Map private DNS namespace (if created)"
+  value       = length(aws_service_discovery_private_dns_namespace.dns_ns) > 0 ? aws_service_discovery_private_dns_namespace.dns_ns[0].arn : null
+}
+

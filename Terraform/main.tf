@@ -75,8 +75,8 @@ module "ec2" {
   depends_on = [module.alb]
 }
 
-# ECS Module
-module "ecs" {
+# ECS Module - Core Services
+module "ecs_core" {
   source = "./modules/ecs"
 
   project_name             = var.project_name
@@ -89,21 +89,19 @@ module "ecs" {
   alb_security_group_id    = module.alb.alb_sg_id
   assign_public_ip         = false
   desired_count            = 1
-  service_names            = ["core", "guest"]
+  service_names            = ["core"]
   service_discovery_domain = "${var.project_name}.${var.service_discovery_domain_suffix}"
-  service_dependencies = {
-    guest = ["core"]
-  }
-  enable_auto_scaling    = var.enable_auto_scaling
-  enable_service_connect = var.enable_service_connect
+  service_dependencies     = {}
+  enable_auto_scaling      = var.enable_auto_scaling
+  enable_service_connect   = var.enable_service_connect
   service_connect_services = {
     core = [
       {
-        port_name      =  var.services["apigateway"].ecs_service_connect_port_name
-        discovery_name =  var.services["apigateway"].ecs_service_connect_discovery_name
+        port_name      = var.services["apigateway"].ecs_service_connect_port_name
+        discovery_name = var.services["apigateway"].ecs_service_connect_discovery_name
         client_aliases = [
           {
-            dns_name =  var.services["apigateway"].ecs_service_connect_dns_name
+            dns_name = var.services["apigateway"].ecs_service_connect_dns_name
             port     = var.services["apigateway"].ecs_container_port_mappings[0].container_port
           }
         ]
@@ -135,18 +133,6 @@ module "ecs" {
           {
             dns_name = var.services["redis"].ecs_service_connect_dns_name
             port     = var.services["redis"].ecs_container_port_mappings[0].container_port
-          }
-        ]
-      }
-    ]
-    guest = [
-      {
-        port_name      = var.services["guest"].ecs_service_connect_port_name
-        discovery_name = var.services["guest"].ecs_service_connect_discovery_name
-        client_aliases = [
-          {
-            dns_name = var.services["guest"].ecs_service_connect_dns_name
-            port     = var.services["guest"].ecs_container_port_mappings[0].container_port
           }
         ]
       }
@@ -261,7 +247,48 @@ module "ecs" {
         }
       ]
     }
+  }
 
+  depends_on = [module.ec2]
+}
+
+# ECS Module - Guest Services (depends on core to ensure RabbitMQ/Redis are ready)
+module "ecs_guest" {
+  source = "./modules/ecs"
+
+  project_name             = var.project_name
+  aws_region               = var.aws_region
+  vpc_id                   = module.vpc.vpc_id
+  vpc_cidr                 = var.vpc_cidr
+  task_subnet_ids          = [module.vpc.private_subnet_id]
+  ecs_cluster_id           = module.ec2.ecs_cluster_arn
+  ecs_cluster_name         = module.ec2.ecs_cluster_name
+  alb_security_group_id    = module.alb.alb_sg_id
+  assign_public_ip         = false
+  desired_count            = 1
+  service_names            = ["guest"]
+  service_discovery_domain = "${var.project_name}.${var.service_discovery_domain_suffix}"
+  service_dependencies     = {}
+  enable_auto_scaling      = var.enable_auto_scaling
+  enable_service_connect   = var.enable_service_connect
+  # Use existing namespace from core service
+  service_connect_namespace = module.ecs_core.service_discovery_namespace_arn
+  service_connect_services = {
+    guest = [
+      {
+        port_name      = var.services["guest"].ecs_service_connect_port_name
+        discovery_name = var.services["guest"].ecs_service_connect_discovery_name
+        client_aliases = [
+          {
+            dns_name = var.services["guest"].ecs_service_connect_dns_name
+            port     = var.services["guest"].ecs_container_port_mappings[0].container_port
+          }
+        ]
+      }
+    ]
+  }
+
+  service_definitions = {
     guest = {
       task_cpu            = 900
       task_memory         = 900
@@ -303,7 +330,7 @@ module "ecs" {
     }
   }
 
-  depends_on = [module.ec2]
+  depends_on = [module.ecs_core]
 }
 
 ## CloudFront and Lambda@Edge modules removed

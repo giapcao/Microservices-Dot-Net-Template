@@ -168,29 +168,25 @@ variable "log_retention_days" {
   default     = 30
 }
 
-# Shared Resources (optional, created externally)
+# Shared Resources (required, created externally)
 variable "shared_log_group_name" {
-  description = "Name of existing CloudWatch log group to use (if provided, skip creating new one)"
+  description = "Name of CloudWatch log group to use"
   type        = string
-  default     = null
 }
 
 variable "shared_task_role_arn" {
-  description = "ARN of existing ECS task role to use (if provided, skip creating new one)"
+  description = "ARN of ECS task role to use"
   type        = string
-  default     = null
 }
 
 variable "shared_execution_role_arn" {
-  description = "ARN of existing ECS execution role to use (if provided, skip creating new one)"
+  description = "ARN of ECS execution role to use"
   type        = string
-  default     = null
 }
 
 variable "shared_task_sg_id" {
-  description = "ID of existing task security group to use (if provided, skip creating new one)"
+  description = "ID of task security group to use"
   type        = string
-  default     = null
 }
 
 variable "max_capacity" {

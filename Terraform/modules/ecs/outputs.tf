@@ -25,31 +25,26 @@ output "task_definition_revisions" {
 
 output "cloudwatch_log_group_name" {
   description = "Name of the CloudWatch log group"
-  value       = local.log_group_name
-}
-
-output "cloudwatch_log_group_arn" {
-  description = "ARN of the CloudWatch log group (if module-created)"
-  value       = length(aws_cloudwatch_log_group.ecs_logs) > 0 ? aws_cloudwatch_log_group.ecs_logs[0].arn : null
+  value       = var.shared_log_group_name
 }
 
 output "ecs_task_role_arn" {
   description = "ARN of the IAM role assumed by the tasks"
-  value       = local.task_role_arn
+  value       = var.shared_task_role_arn
 }
 
 output "ecs_execution_role_arn" {
   description = "ARN of the IAM role used for ECS task execution"
-  value       = local.execution_role_arn
+  value       = var.shared_execution_role_arn
 }
 
-output "service_discovery_namespace_id" {
-  description = "ID of the Cloud Map private DNS namespace (if created)"
-  value       = length(aws_service_discovery_private_dns_namespace.dns_ns) > 0 ? aws_service_discovery_private_dns_namespace.dns_ns[0].id : null
+output "task_security_group_id" {
+  description = "ID of the task security group"
+  value       = var.shared_task_sg_id
 }
 
 output "service_discovery_namespace_arn" {
-  description = "ARN of the Cloud Map private DNS namespace (if created)"
-  value       = length(aws_service_discovery_private_dns_namespace.dns_ns) > 0 ? aws_service_discovery_private_dns_namespace.dns_ns[0].arn : null
+  description = "ARN of the Cloud Map private DNS namespace (passed via input)"
+  value       = var.service_connect_namespace
 }
 

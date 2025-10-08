@@ -17,6 +17,9 @@ services = {
     alb_listener_rule_priority   = 14
     alb_listener_rule_conditions = []
 
+    ecs_service_connect_dns_name       = "rabbitmq"
+    ecs_service_connect_discovery_name = "rabbitmq"
+    ecs_service_connect_port_name      = "rabbitmq"
     ecs_container_name_suffix          = "rabbitmq"
     ecs_container_image_repository_url = "rabbitmq"
     ecs_container_image_tag            = "3-management"

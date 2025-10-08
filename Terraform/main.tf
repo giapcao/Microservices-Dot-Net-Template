@@ -99,54 +99,54 @@ module "ecs" {
   service_connect_services = {
     core = [
       {
-        port_name      = "apigateway"
-        discovery_name = "api-gateway"
+        port_name      =  var.services["apigateway"].ecs_service_connect_port_name
+        discovery_name =  var.services["apigateway"].ecs_service_connect_discovery_name
         client_aliases = [
           {
-            dns_name = "api-gateway"
+            dns_name =  var.services["apigateway"].ecs_service_connect_dns_name
             port     = var.services["apigateway"].ecs_container_port_mappings[0].container_port
           }
         ]
       },
       {
-        port_name      = "user"
-        discovery_name = "user-service"
+        port_name      = var.services["user"].ecs_service_connect_port_name
+        discovery_name = var.services["user"].ecs_service_connect_discovery_name
         client_aliases = [
           {
-            dns_name = "user-service"
+            dns_name = var.services["user"].ecs_service_connect_dns_name
             port     = var.services["user"].ecs_container_port_mappings[0].container_port
           }
         ]
       },
       {
-        port_name      = "rabbitmq"
-        discovery_name = "rabbitmq"
+        port_name      = var.services["rabbitmq"].ecs_service_connect_port_name
+        discovery_name = var.services["rabbitmq"].ecs_service_connect_discovery_name
         client_aliases = [
           {
-            dns_name = "rabbitmq"
-            port     = 5672
+            dns_name = var.services["rabbitmq"].ecs_service_connect_dns_name
+            port     = var.services["rabbitmq"].ecs_container_port_mappings[0].container_port
           }
         ]
       },
       {
-        port_name      = "redis"
-        discovery_name = "redis"
+        port_name      = var.services["redis"].ecs_service_connect_port_name
+        discovery_name = var.services["redis"].ecs_service_connect_discovery_name
         client_aliases = [
           {
-            dns_name = "redis"
-            port     = 6379
+            dns_name = var.services["redis"].ecs_service_connect_dns_name
+            port     = var.services["redis"].ecs_container_port_mappings[0].container_port
           }
         ]
       }
     ]
     guest = [
       {
-        port_name      = "guest"
-        discovery_name = "guest-service"
+        port_name      = var.services["guest"].ecs_service_connect_port_name
+        discovery_name = var.services["guest"].ecs_service_connect_discovery_name
         client_aliases = [
           {
-            dns_name = local.guest_service_host
-            port     = 5001
+            dns_name = var.services["guest"].ecs_service_connect_dns_name
+            port     = var.services["guest"].ecs_container_port_mappings[0].container_port
           }
         ]
       }

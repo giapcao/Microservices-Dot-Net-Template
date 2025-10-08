@@ -17,6 +17,9 @@ services = {
     alb_listener_rule_priority   = 12
     alb_listener_rule_conditions = []
 
+    ecs_service_connect_dns_name       = "guest-service"
+    ecs_service_connect_discovery_name = "guest-service"
+    ecs_service_connect_port_name      = "guest"
     ecs_container_name_suffix          = "microservice"
     ecs_container_image_repository_url = "897279497116.dkr.ecr.us-east-1.amazonaws.com/vkev-infrastructure-khanghv2406-ecr"
     ecs_container_image_tag            = "Guest.Microservice-latest"

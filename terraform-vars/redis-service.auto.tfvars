@@ -17,6 +17,9 @@ services = {
     alb_listener_rule_priority   = 13
     alb_listener_rule_conditions = []
 
+    ecs_service_connect_dns_name       = "redis"
+    ecs_service_connect_discovery_name = "redis"
+    ecs_service_connect_port_name      = "redis"
     ecs_container_name_suffix          = "redis"
     ecs_container_image_repository_url = "redis"
     ecs_container_image_tag            = "alpine"

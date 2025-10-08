@@ -252,6 +252,16 @@ module "ecs_core" {
             port     = var.services["redis"].ecs_container_port_mappings[0].container_port
           }
         ]
+      },
+      {
+        # Client-only: Consume guest-service from namespace (no port_name = client-only)
+        discovery_name = var.services["guest"].ecs_service_connect_discovery_name
+        client_aliases = [
+          {
+            dns_name = var.services["guest"].ecs_service_connect_dns_name
+            port     = var.services["guest"].ecs_container_port_mappings[0].container_port
+          }
+        ]
       }
     ]
   }
@@ -401,12 +411,33 @@ module "ecs_guest" {
   service_connect_services = {
     guest = [
       {
+        # Publish guest-service to namespace
         port_name      = var.services["guest"].ecs_service_connect_port_name
         discovery_name = var.services["guest"].ecs_service_connect_discovery_name
         client_aliases = [
           {
             dns_name = var.services["guest"].ecs_service_connect_dns_name
             port     = var.services["guest"].ecs_container_port_mappings[0].container_port
+          }
+        ]
+      },
+      {
+        # Client-only: Consume RabbitMQ from namespace (no port_name = client-only)
+        discovery_name = var.services["rabbitmq"].ecs_service_connect_discovery_name
+        client_aliases = [
+          {
+            dns_name = var.services["rabbitmq"].ecs_service_connect_dns_name
+            port     = var.services["rabbitmq"].ecs_container_port_mappings[0].container_port
+          }
+        ]
+      },
+      {
+        # Client-only: Consume Redis from namespace (no port_name = client-only)
+        discovery_name = var.services["redis"].ecs_service_connect_discovery_name
+        client_aliases = [
+          {
+            dns_name = var.services["redis"].ecs_service_connect_dns_name
+            port     = var.services["redis"].ecs_container_port_mappings[0].container_port
           }
         ]
       }

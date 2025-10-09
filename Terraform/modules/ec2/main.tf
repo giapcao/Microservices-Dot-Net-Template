@@ -1,13 +1,3 @@
-##########################################################################
-# REQUIRED VARIABLES
-# var.project_name      â€“ prefix for names/tags
-# var.vpc_id            â€“ VPC where the instance will live
-# var.vpc_cidr          â€“ e.g. "10.0.0.0/16"
-# var.subnet_id         â€“ public (or private with NAT) subnet ID
-# var.instance_type     â€“ e.g. "t3.small"
-# var.root_volume_size  â€“ e.g. 30
-# var.associate_public_ip (bool) â€“ default true
-##########################################################################
 
 # Latest Amazon Linux 2 ECS-optimised AMI
 data "aws_ami" "ecs_optimized" {
@@ -145,7 +135,7 @@ locals {
   container_instance_groups = {
     for name, cfg in local.requested_container_instance_groups :
     name => {
-      instance_type       = coalesce(lookup(cfg, "instance_type", null), var.instance_type, "t3.small")
+      instance_type       = coalesce(lookup(cfg, "instance_type", null), var.instance_type, "t2.micro")
       root_volume_size    = lookup(cfg, "root_volume_size", var.root_volume_size)
       associate_public_ip = coalesce(lookup(cfg, "associate_public_ip", null), var.associate_public_ip, false)
       instance_attributes = lookup(cfg, "instance_attributes", {})

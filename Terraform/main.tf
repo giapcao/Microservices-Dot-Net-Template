@@ -332,7 +332,7 @@ module "ecs_server1" {
 }
 
 # ECS Module - Server-2 (API Gateway + Guest microservice)
-# Deploys in parallel with server-1 - Service Connect handles auto-discovery
+# Deploys after server-1 to ensure service discovery endpoints are available
 module "ecs_server2" {
   source = "./modules/ecs"
 
@@ -460,7 +460,7 @@ module "ecs_server2" {
     }
   }
 
-  depends_on = [module.ec2]
+  depends_on = [module.ecs_server1]
 }
 
 ## CloudFront and Lambda@Edge modules removed

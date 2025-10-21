@@ -40,6 +40,24 @@ module "alb" {
         healthy_threshold   = var.services["apigateway"].alb_health_check.healthy_threshold
         unhealthy_threshold = var.services["apigateway"].alb_health_check.unhealthy_threshold
       }
+    },
+    {
+      # n8n Target Group
+      name_suffix = "n8n"
+      port        = var.services["n8n"].alb_target_group_port
+      protocol    = var.services["n8n"].alb_target_group_protocol
+      target_type = var.services["n8n"].alb_target_group_type
+      health_check = {
+        enabled             = var.services["n8n"].alb_health_check.enabled
+        path                = var.services["n8n"].alb_health_check.path
+        port                = var.services["n8n"].alb_health_check.port
+        protocol            = var.services["n8n"].alb_health_check.protocol
+        matcher             = var.services["n8n"].alb_health_check.matcher
+        interval            = var.services["n8n"].alb_health_check.interval
+        timeout             = var.services["n8n"].alb_health_check.timeout
+        healthy_threshold   = var.services["n8n"].alb_health_check.healthy_threshold
+        unhealthy_threshold = var.services["n8n"].alb_health_check.unhealthy_threshold
+      }
     }
   ]
 
@@ -48,7 +66,13 @@ module "alb" {
     target_group_suffix = "apigateway"
   }
 
-  listener_rules_definition = []
+  listener_rules_definition = [
+    {
+      priority            = var.services["n8n"].alb_listener_rule_priority
+      target_group_suffix = "n8n"
+      conditions          = var.services["n8n"].alb_listener_rule_conditions
+    }
+  ]
 }
 
 # EC2 Module
@@ -203,7 +227,7 @@ module "ecs_server1" {
   service_dependencies     = {}
   enable_auto_scaling      = var.enable_auto_scaling
   enable_service_connect   = var.enable_service_connect
-  
+
   # Pass shared resources
   shared_log_group_name     = aws_cloudwatch_log_group.ecs_logs.name
   shared_task_role_arn      = aws_iam_role.ecs_task_role.arn
@@ -351,7 +375,7 @@ module "ecs_server2" {
   service_dependencies     = {}
   enable_auto_scaling      = var.enable_auto_scaling
   enable_service_connect   = var.enable_service_connect
-  
+
   # Pass shared resources (same as server-1)
   shared_log_group_name     = aws_cloudwatch_log_group.ecs_logs.name
   shared_task_role_arn      = aws_iam_role.ecs_task_role.arn
@@ -374,6 +398,17 @@ module "ecs_server2" {
         ]
       },
       {
+        # Publish n8n automation to namespace
+        port_name      = var.services["n8n"].ecs_service_connect_port_name
+        discovery_name = var.services["n8n"].ecs_service_connect_discovery_name
+        client_aliases = [
+          {
+            dns_name = var.services["n8n"].ecs_service_connect_dns_name
+            port     = var.services["n8n"].ecs_container_port_mappings[0].container_port
+          }
+        ]
+      },
+      {
         # Publish API Gateway to namespace
         port_name      = var.services["apigateway"].ecs_service_connect_port_name
         discovery_name = var.services["apigateway"].ecs_service_connect_discovery_name
@@ -390,8 +425,8 @@ module "ecs_server2" {
 
   service_definitions = {
     server-2 = {
-      task_cpu            = 360
-      task_memory         = 360
+      task_cpu            = var.services["guest"].ecs_container_cpu + var.services["apigateway"].ecs_container_cpu + var.services["n8n"].ecs_container_cpu
+      task_memory         = var.services["guest"].ecs_container_memory + var.services["apigateway"].ecs_container_memory + var.services["n8n"].ecs_container_memory
       desired_count       = 1
       assign_public_ip    = false
       enable_auto_scaling = false
@@ -426,7 +461,29 @@ module "ecs_server2" {
           depends_on = []
         },
         {
-          # API Gateway - depends on Guest microservice
+          # n8n automation - required before API Gateway becomes available
+          name                 = "n8n"
+          image_repository_url = var.services["n8n"].ecs_container_image_repository_url
+          image_tag            = var.services["n8n"].ecs_container_image_tag
+          cpu                  = var.services["n8n"].ecs_container_cpu
+          memory               = var.services["n8n"].ecs_container_memory
+          essential            = var.services["n8n"].ecs_container_essential
+          port_mappings        = var.services["n8n"].ecs_container_port_mappings
+          environment_variables = [
+            for env_var in var.services["n8n"].ecs_environment_variables :
+            env_var
+          ]
+          health_check = {
+            command     = var.services["n8n"].ecs_container_health_check.command
+            interval    = var.services["n8n"].ecs_container_health_check.interval
+            timeout     = var.services["n8n"].ecs_container_health_check.timeout
+            retries     = var.services["n8n"].ecs_container_health_check.retries
+            startPeriod = var.services["n8n"].ecs_container_health_check.startPeriod
+          }
+          depends_on = []
+        },
+        {
+          # API Gateway - depends on Guest microservice and n8n
           name                 = "api-gateway"
           image_repository_url = var.services["apigateway"].ecs_container_image_repository_url
           image_tag            = var.services["apigateway"].ecs_container_image_tag
@@ -445,7 +502,7 @@ module "ecs_server2" {
             retries     = var.services["apigateway"].ecs_container_health_check.retries
             startPeriod = var.services["apigateway"].ecs_container_health_check.startPeriod
           }
-          depends_on = ["guest-microservice"]
+          depends_on = ["guest-microservice", "n8n"]
         }
       ]
 
@@ -455,6 +512,12 @@ module "ecs_server2" {
           target_group_arn = module.alb.target_group_arns_map["apigateway"]
           container_name   = "api-gateway"
           container_port   = var.services["apigateway"].ecs_container_port_mappings[0].container_port
+        },
+        {
+          # n8n HTTP exposure via ALB
+          target_group_arn = module.alb.target_group_arns_map["n8n"]
+          container_name   = "n8n"
+          container_port   = var.services["n8n"].ecs_container_port_mappings[0].container_port
         }
       ]
     }

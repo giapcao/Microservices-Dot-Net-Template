@@ -96,9 +96,9 @@ variable "services" {
       }))
       # Add other condition types here if needed (e.g., host_header)
     }))
-    ecs_service_connect_dns_name = string # Optional custom DNS name for the service
+    ecs_service_connect_dns_name       = string # Optional custom DNS name for the service
     ecs_service_connect_discovery_name = string # Optional custom DNS name for the service
-    ecs_service_connect_port_name = string # Optional custom DNS name for the service
+    ecs_service_connect_port_name      = string # Optional custom DNS name for the service
     # ECS Container attributes
     ecs_container_name_suffix          = string # e.g. "microservice" to form "project-key-suffix"
     ecs_container_image_repository_url = string
@@ -133,5 +133,5 @@ variable "services" {
     ecs_enable_auto_scaling = optional(bool)
   }))
   sensitive = true
-  
+
 }

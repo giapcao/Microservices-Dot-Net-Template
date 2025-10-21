@@ -113,7 +113,7 @@ resource "aws_lb_listener" "http" {
 }
 
 resource "aws_lb_listener_rule" "rules" {
-  for_each = local.listener_rules # Use index for unique keying and skip empty condition sets
+  for_each = try(nonsensitive(local.listener_rules), local.listener_rules) # Use index for unique keying and skip empty condition sets
 
   listener_arn = aws_lb_listener.http.arn
   priority     = each.value.priority

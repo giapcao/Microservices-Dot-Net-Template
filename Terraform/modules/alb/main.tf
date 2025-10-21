@@ -86,7 +86,7 @@ resource "aws_lb_listener" "http" {
     type = var.default_listener_action.type
     target_group_arn = var.default_listener_action.type == "forward" && var.default_listener_action.target_group_suffix != null ? (
       aws_lb_target_group.this[var.default_listener_action.target_group_suffix].arn
-      ) : null
+    ) : null
 
     dynamic "fixed_response" {
       for_each = var.default_listener_action.type == "fixed-response" ? compact([try(var.default_listener_action.fixed_response, null)]) : []
@@ -104,7 +104,10 @@ resource "aws_lb_listener" "http" {
 }
 
 resource "aws_lb_listener_rule" "rules" {
-  for_each = { for idx, rule_conf in var.listener_rules_definition : idx => rule_conf } # Use index for unique keying
+  for_each = {
+    for idx, rule_conf in var.listener_rules_definition :
+    idx => rule_conf if length(coalesce(rule_conf.conditions, [])) > 0
+  } # Use index for unique keying and skip empty condition sets
 
   listener_arn = aws_lb_listener.http.arn
   priority     = each.value.priority
@@ -115,22 +118,25 @@ resource "aws_lb_listener_rule" "rules" {
   }
 
   dynamic "condition" {
-    for_each = each.value.conditions
+    for_each = {
+      for idx, cond in coalesce(each.value.conditions, []) :
+      idx => cond
+    }
     content {
       dynamic "path_pattern" {
-        for_each = condition.value.path_pattern != null ? [condition.value.path_pattern] : []
+        for_each = try(condition.value.path_pattern, null) != null ? [condition.value.path_pattern] : []
         content {
           values = path_pattern.value.values
         }
       }
       dynamic "host_header" {
-        for_each = condition.value.host_header != null ? [condition.value.host_header] : []
+        for_each = try(condition.value.host_header, null) != null ? [condition.value.host_header] : []
         content {
           values = host_header.value.values
         }
       }
       dynamic "http_request_method" {
-        for_each = condition.value.http_request_method != null ? [condition.value.http_request_method] : []
+        for_each = try(condition.value.http_request_method, null) != null ? [condition.value.http_request_method] : []
         content {
           values = http_request_method.value.values
         }

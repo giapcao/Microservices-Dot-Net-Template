@@ -1,7 +1,7 @@
 locals {
-  listener_rules_source = jsondecode(jsonencode(var.listener_rules_definition))
+  listener_rules_list = tolist(try(nonsensitive(var.listener_rules_definition), var.listener_rules_definition))
   listener_rules = {
-    for idx, rule in local.listener_rules_source :
+    for idx, rule in local.listener_rules_list :
     tostring(idx) => rule
     if length(coalesce(try(rule.conditions, []), [])) > 0
   }

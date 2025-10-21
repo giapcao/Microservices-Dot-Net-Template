@@ -2,7 +2,9 @@ locals {
   listener_rules_list = tolist(try(nonsensitive(var.listener_rules_definition), var.listener_rules_definition))
   listener_rules = {
     for idx, rule in local.listener_rules_list :
-    tostring(idx) => rule
+    tostring(idx) => merge(rule, {
+      conditions = try(nonsensitive(rule.conditions), rule.conditions)
+    })
     if length(coalesce(try(rule.conditions, []), [])) > 0
   }
 }
@@ -124,10 +126,7 @@ resource "aws_lb_listener_rule" "rules" {
   }
 
   dynamic "condition" {
-    for_each = {
-      for idx, cond in coalesce(try(each.value.conditions, []), []) :
-      tostring(idx) => cond
-    }
+    for_each = coalesce(try(each.value.conditions, []), [])
     content {
       dynamic "path_pattern" {
         for_each = try(condition.value.path_pattern, null) != null ? [condition.value.path_pattern] : []

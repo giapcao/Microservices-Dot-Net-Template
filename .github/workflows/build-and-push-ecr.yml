@@ -160,17 +160,30 @@ jobs:
 
       - name: Output image details
         run: |
-          echo "### Build Summary for ${{ matrix.service }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Service**: ${{ matrix.service }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Project**: ${{ env.PROJECT_NAME }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Repository**: ${{ env.ECR_REPO_NAME }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Region**: ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
+          echo "### ✅ Build Summary for ${{ matrix.service }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "#### Terraform Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | ${{ matrix.service }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Project | ${{ env.PROJECT_NAME }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Repository | ${{ env.ECR_REPO_NAME }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Region | ${{ env.AWS_REGION }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Image Tag | ${{ matrix.service }}-${{ steps.set-tag.outputs.IMAGE_TAG }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### 📦 ECR Repository URL" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### 🔧 Terraform Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`hcl" >> $GITHUB_STEP_SUMMARY
+          echo "# Copy these values to your Terraform .tfvars file" >> $GITHUB_STEP_SUMMARY
           echo "ecs_container_image_repository_url = \"${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO_NAME }}\"" >> $GITHUB_STEP_SUMMARY
           echo "ecs_container_image_tag            = \"${{ matrix.service }}-${{ steps.set-tag.outputs.IMAGE_TAG }}\"" >> $GITHUB_STEP_SUMMARY
-          echo "# Or use latest:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Or use latest tag:" >> $GITHUB_STEP_SUMMARY
           echo "ecs_container_image_tag            = \"${{ matrix.service }}-latest\"" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
@@ -199,36 +212,64 @@ jobs:
 
       - name: Generate summary
         run: |
-          echo "## Microservices Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 🎉 Microservices Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Environment**: ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Discovered Services**: ${{ needs.discover-services.outputs.services }}" >> $GITHUB_STEP_SUMMARY
-          echo "**AWS Region**: ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Build Status**: ${{ needs.build-and-push.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | ${{ inputs.environment }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| AWS Region | ${{ env.AWS_REGION }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Project | ${{ env.PROJECT_NAME }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Status | ${{ needs.build-and-push.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "${{ needs.build-and-push.result }}" == "success" ]; then
-            echo "All microservices built and pushed successfully!" >> $GITHUB_STEP_SUMMARY
+            echo "### ✅ All Microservices Built Successfully!" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Ready to Deploy - Copy these values to Terraform:" >> $GITHUB_STEP_SUMMARY
+            
+            SERVICES='${{ needs.discover-services.outputs.services }}'
+            SERVICE_COUNT=$(echo "$SERVICES" | jq 'length')
+            echo "**Services Built**: $SERVICE_COUNT" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            echo "### 📦 ECR Repository URL" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "All services are stored in this repository:" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "${{ steps.login-ecr-summary.outputs.registry }}/${{ env.ECR_REPO_NAME }}" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            echo "### 🔧 Terraform Configuration" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Copy these values to your Terraform \`.tfvars\` files:" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`hcl" >> $GITHUB_STEP_SUMMARY
-            echo "# Update these in your Terraform variables.tf" >> $GITHUB_STEP_SUMMARY
-            echo "# ECR Repository URL (same for all services):" >> $GITHUB_STEP_SUMMARY
-            echo "# ${{ steps.login-ecr-summary.outputs.registry }}/${{ env.ECR_REPO_NAME }}" >> $GITHUB_STEP_SUMMARY
+            echo "# Common repository URL for all services:" >> $GITHUB_STEP_SUMMARY
+            echo "ecs_container_image_repository_url = \"${{ steps.login-ecr-summary.outputs.registry }}/${{ env.ECR_REPO_NAME }}\"" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             
             # Parse the services JSON and output each service
-            SERVICES='${{ needs.discover-services.outputs.services }}'
+            echo "# Service-specific image tags:" >> $GITHUB_STEP_SUMMARY
             echo "$SERVICES" | jq -r '.[]' | while read service; do
               echo "# For $service:" >> $GITHUB_STEP_SUMMARY
-              echo "ecs_container_image_repository_url = \"${{ steps.login-ecr-summary.outputs.registry }}/${{ env.ECR_REPO_NAME }}\"" >> $GITHUB_STEP_SUMMARY
-              echo "ecs_container_image_tag            = \"${service}-latest\"" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "ecs_container_image_tag = \"${service}-latest\"  # or use specific SHA tag" >> $GITHUB_STEP_SUMMARY
             done
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            echo "### 📋 Built Services:" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "$SERVICES" | jq -r '.[]' | while read service; do
+              echo "- ✅ **$service**: \`${service}-latest\`" >> $GITHUB_STEP_SUMMARY
+            done
+            
           elif [ "${{ needs.build-and-push.result }}" == "failure" ]; then
-            echo "Some microservices failed to build. Check the logs above." >> $GITHUB_STEP_SUMMARY
+            echo "### ❌ Build Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Some microservices failed to build. Check the logs above for details." >> $GITHUB_STEP_SUMMARY
           else
+            echo "### ⚠️ Build Completed with Warnings" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
             echo "Build completed with warnings or was skipped." >> $GITHUB_STEP_SUMMARY
           fi

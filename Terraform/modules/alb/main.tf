@@ -1,3 +1,11 @@
+locals {
+  listener_rules = {
+    for idx, rule in try(nonsensitive(var.listener_rules_definition), var.listener_rules_definition) :
+    tostring(idx) => rule
+    if length(coalesce(try(rule.conditions, []), [])) > 0
+  }
+}
+
 resource "aws_security_group" "alb_sg" {
   name_prefix = "${var.project_name}-alb-sg-" # Added trailing hyphen for better readability if name_prefix truncates
   vpc_id      = var.vpc_id
@@ -104,10 +112,7 @@ resource "aws_lb_listener" "http" {
 }
 
 resource "aws_lb_listener_rule" "rules" {
-  for_each = {
-    for idx, rule_conf in var.listener_rules_definition :
-    idx => rule_conf if length(coalesce(rule_conf.conditions, [])) > 0
-  } # Use index for unique keying and skip empty condition sets
+  for_each = local.listener_rules # Use index for unique keying and skip empty condition sets
 
   listener_arn = aws_lb_listener.http.arn
   priority     = each.value.priority
@@ -119,8 +124,8 @@ resource "aws_lb_listener_rule" "rules" {
 
   dynamic "condition" {
     for_each = {
-      for idx, cond in coalesce(each.value.conditions, []) :
-      idx => cond
+      for idx, cond in coalesce(try(each.value.conditions, []), []) :
+      tostring(idx) => cond
     }
     content {
       dynamic "path_pattern" {

@@ -136,6 +136,11 @@ variable "service_definitions" {
         name  = string
         value = string
       })), [])
+      mount_points = optional(list(object({
+        source_volume  = string
+        container_path = string
+        read_only      = optional(bool, false)
+      })), [])
       health_check = optional(object({
         command     = list(string)
         interval    = optional(number, 30)
@@ -153,6 +158,10 @@ variable "service_definitions" {
       target_group_arn = string
       container_name   = string
       container_port   = number
+    })), [])
+    volumes = optional(list(object({
+      name      = string
+      host_path = optional(string)
     })), [])
   }))
   default = {}

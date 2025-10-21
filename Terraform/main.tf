@@ -284,6 +284,17 @@ module "ecs_server1" {
         }
       ]
 
+      volumes = [
+        {
+          name      = "rabbitmq-data"
+          host_path = "/var/lib/${var.project_name}/rabbitmq"
+        },
+        {
+          name      = "redis-data"
+          host_path = "/var/lib/${var.project_name}/redis"
+        }
+      ]
+
       containers = [
         {
           # RabbitMQ - deployed first as dependency
@@ -302,6 +313,12 @@ module "ecs_server1" {
             retries     = var.services["rabbitmq"].ecs_container_health_check.retries
             startPeriod = var.services["rabbitmq"].ecs_container_health_check.startPeriod
           }
+          mount_points = [
+            {
+              source_volume  = "rabbitmq-data"
+              container_path = "/var/lib/rabbitmq"
+            }
+          ]
           depends_on = []
         },
         {
@@ -322,6 +339,12 @@ module "ecs_server1" {
             retries     = var.services["redis"].ecs_container_health_check.retries
             startPeriod = var.services["redis"].ecs_container_health_check.startPeriod
           }
+          mount_points = [
+            {
+              source_volume  = "redis-data"
+              container_path = "/data"
+            }
+          ]
           depends_on = []
         },
         {
@@ -437,6 +460,13 @@ module "ecs_server2" {
         }
       ]
 
+      volumes = [
+        {
+          name      = "n8n-data"
+          host_path = "/var/lib/${var.project_name}/n8n"
+        }
+      ]
+
       containers = [
         {
           # Guest microservice - deployed first as dependency for API Gateway
@@ -480,6 +510,12 @@ module "ecs_server2" {
             retries     = var.services["n8n"].ecs_container_health_check.retries
             startPeriod = var.services["n8n"].ecs_container_health_check.startPeriod
           }
+          mount_points = [
+            {
+              source_volume  = "n8n-data"
+              container_path = "/home/node/.n8n"
+            }
+          ]
           depends_on = []
         },
         {

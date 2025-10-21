@@ -30,6 +30,7 @@ locals {
       deployment_minimum_healthy_percent = lookup(service, "deployment_minimum_healthy_percent", 50)
       placement_constraints              = lookup(service, "placement_constraints", [])
       target_groups                      = lookup(service, "target_groups", [])
+      volumes                            = lookup(service, "volumes", [])
       containers = [
         for container in service.containers : merge(
           container,
@@ -50,6 +51,13 @@ locals {
                 lookup(pm, "name", null) != null ? { name = pm.name } : {},
                 lookup(pm, "app_protocol", null) != null ? { app_protocol = pm.app_protocol } : {}
               )
+            ]
+            mount_points = [
+              for mp in lookup(container, "mount_points", []) : {
+                source_volume  = mp.source_volume
+                container_path = mp.container_path
+                read_only      = lookup(mp, "read_only", false)
+              }
             ]
           }
         )
@@ -100,6 +108,14 @@ resource "aws_ecs_task_definition" "this" {
           }
         ]
 
+        mountPoints = [
+          for mp in c.mount_points : {
+            containerPath = mp.container_path
+            sourceVolume  = mp.source_volume
+            readOnly      = mp.read_only
+          }
+        ]
+
         logConfiguration = {
           logDriver = "awslogs"
           options = {
@@ -131,6 +147,14 @@ resource "aws_ecs_task_definition" "this" {
       } : {}
     )
   ])
+
+  dynamic "volume" {
+    for_each = local.normalized_services[each.key].volumes
+    content {
+      name      = volume.value.name
+      host_path = try(volume.value.host_path, null)
+    }
+  }
 
   tags = { Name = "${var.project_name}-${each.key}-task" }
 }

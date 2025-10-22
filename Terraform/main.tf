@@ -89,10 +89,23 @@ module "ec2" {
     server-1 = {
       instance_attributes = { service_group = "server-1" }
       tags                = { ServiceGroup = "server-1" }
+      user_data_extra     = <<-EOF
+        mkdir -p /var/lib/${var.project_name}/rabbitmq
+        mkdir -p /var/lib/${var.project_name}/redis
+        chown 999:999 /var/lib/${var.project_name}/rabbitmq || true
+        chown 999:999 /var/lib/${var.project_name}/redis || true
+        chmod 0775 /var/lib/${var.project_name}/rabbitmq || chmod 0777 /var/lib/${var.project_name}/rabbitmq
+        chmod 0775 /var/lib/${var.project_name}/redis || chmod 0777 /var/lib/${var.project_name}/redis
+      EOF
     }
     server-2 = {
       instance_attributes = { service_group = "server-2" }
       tags                = { ServiceGroup = "server-2" }
+      user_data_extra     = <<-EOF
+        mkdir -p /var/lib/${var.project_name}/n8n
+        chown 1000:1000 /var/lib/${var.project_name}/n8n || true
+        chmod 0775 /var/lib/${var.project_name}/n8n || chmod 0777 /var/lib/${var.project_name}/n8n
+      EOF
     }
   }
 

@@ -1,6 +1,6 @@
 services = {
   n8n = {
-    alb_target_group_port     = 8080
+    alb_target_group_port     = 8088
     alb_target_group_protocol = "HTTP"
     alb_target_group_type     = "ip"
     alb_health_check = {

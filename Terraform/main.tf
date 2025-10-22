@@ -557,7 +557,7 @@ module "ecs_server2" {
           essential            = true
           port_mappings = [
             {
-              container_port = 8080
+              container_port = 8088
               host_port      = 0
               protocol       = "tcp"
               name           = "n8n-proxy"
@@ -569,7 +569,7 @@ module "ecs_server2" {
             <<-EOT
 cat <<'EOF' > /etc/nginx/conf.d/default.conf
 server {
-    listen 8080;
+    listen 8088;
     server_name _;
     client_max_body_size 50m;
 
@@ -638,7 +638,7 @@ EOT
           # n8n HTTP exposure via ALB
           target_group_arn = module.alb.target_group_arns_map["n8n"]
           container_name   = "n8n-proxy"
-          container_port   = 8080
+          container_port   = 8088
         }
       ]
     }

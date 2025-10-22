@@ -5,7 +5,7 @@ services = {
     alb_target_group_type     = "ip"
     alb_health_check = {
       enabled             = true
-      path                = "/healthz"
+      path                = "/rest/health"
       port                = "traffic-port"
       protocol            = "HTTP"
       matcher             = "200-399"
@@ -48,7 +48,7 @@ services = {
     ]
 
     ecs_container_health_check = {
-      command     = ["CMD-SHELL", "curl -f http://localhost:5678/healthz || exit 1"]
+      command     = ["CMD-SHELL", "curl -fsS http://localhost:5678/rest/health || exit 1"]
       interval    = 30
       timeout     = 5
       retries     = 3

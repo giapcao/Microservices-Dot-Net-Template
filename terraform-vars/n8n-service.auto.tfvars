@@ -18,7 +18,17 @@ services = {
     alb_listener_rule_conditions = [
       {
         path_pattern = {
-          values = ["/n8n", "/n8n/*"]
+          values = [
+            "/n8n",
+            "/n8n/*",
+            "/rest",
+            "/rest/*",
+            "/socket.io/*",
+            "/webhook/*",
+            "/webhook-test/*",
+            "/static/*",
+            "/favicon.ico"
+          ]
         }
       }
     ]
@@ -46,6 +56,7 @@ services = {
       { name = "N8N_PORT", value = "5678" },
       { name = "N8N_PROTOCOL", value = "http" },
       { name = "N8N_SECURE_COOKIE", value = "false" },
+      { name = "N8N_BASE_PATH", value = "/n8n" },
       { name = "GENERIC_TIMEZONE", value = "Asia/Ho_Chi_Minh" },
       { name = "TZ", value = "Asia/Ho_Chi_Minh" },
       { name = "N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS", value = "true" },

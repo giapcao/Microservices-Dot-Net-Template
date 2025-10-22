@@ -532,7 +532,7 @@ module "ecs_server2" {
               },
               {
                 name  = "N8N_PATH"
-                value = "/n8n"
+                value = "/n8n/"
               }
             ]
           )

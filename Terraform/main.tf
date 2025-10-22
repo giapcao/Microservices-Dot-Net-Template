@@ -531,8 +531,8 @@ module "ecs_server2" {
                 value = "http://${module.alb.alb_dns_name}/n8n/"
               },
               {
-                name  = "N8N_PATH"
-                value = "/n8n/"
+                name  = "N8N_DEPLOYMENT_SUBFOLDER"
+                value = "/n8n"
               }
             ]
           )

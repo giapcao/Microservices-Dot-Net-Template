@@ -311,10 +311,10 @@ jobs:
         working-directory: Terraform
         run: |
           terraform init \
-            -backend-config="bucket=${{ env.PROJECT_NAME }}-terraform-state" \
+            -backend-config="bucket=${{ env.PROJECT_NAME }}-${{ env.AWS_REGION }}-terraform-state" \
             -backend-config="key=terraform.tfstate" \
             -backend-config="region=${{ env.AWS_REGION }}" \
-            -backend-config="dynamodb_table=${{ env.PROJECT_NAME }}-terraform-locks"
+            -backend-config="dynamodb_table=${{ env.PROJECT_NAME }}-${{ env.AWS_REGION }}-terraform-locks"
 
       - name: Terraform Validate
         working-directory: Terraform

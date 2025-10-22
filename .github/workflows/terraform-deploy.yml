@@ -140,8 +140,8 @@ jobs:
           AWS_REGION: ${{ env.AWS_REGION }}
           PROJECT_NAME: ${{ env.PROJECT_NAME }}
         run: |
-          BUCKET="${PROJECT_NAME}-terraform-state"
-          TABLE="${PROJECT_NAME}-terraform-locks"
+          BUCKET="${PROJECT_NAME}-${AWS_REGION}-terraform-state"
+          TABLE="${PROJECT_NAME}-${AWS_REGION}-terraform-locks"
           
           echo "Initializing Terraform with backend:"
           echo "  Bucket: ${BUCKET}"

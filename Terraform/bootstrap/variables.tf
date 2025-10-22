@@ -6,7 +6,7 @@ variable "region" {
 
 variable "project_name" {
   description = "Project name prefix for backend resources"
-  type        = string
+  type        = "testtest"
 }
 
 variable "dynamodb_table_name" {

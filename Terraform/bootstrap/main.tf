@@ -1,7 +1,15 @@
 locals {
   bucket_force_destroy = false
-  final_bucket_name     = lower(join("-", compact([var.project_name, "terraform-state"])))
-  final_dynamodb_table  = lower(join("-", compact([var.project_name, var.dynamodb_table_name])))
+  final_bucket_name = lower(join("-", compact([
+    var.project_name,
+    replace(var.region, "_", "-"),
+    "terraform-state"
+  ])))
+  final_dynamodb_table = lower(join("-", compact([
+    var.project_name,
+    replace(var.region, "_", "-"),
+    var.dynamodb_table_name
+  ])))
 }
 
 data "aws_caller_identity" "current" {}

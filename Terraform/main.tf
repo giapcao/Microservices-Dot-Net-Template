@@ -563,6 +563,13 @@ module "ecs_server2" {
               name           = "n8n-proxy"
             }
           ]
+          health_check = {
+            command     = ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8088/n8n/healthz || exit 1"]
+            interval    = 30
+            timeout     = 5
+            retries     = 3
+            startPeriod = 30
+          }
           command = [
             "sh",
             "-c",

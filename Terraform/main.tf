@@ -523,11 +523,7 @@ module "ecs_server2" {
                 value = "http://${module.alb.alb_dns_name}/n8n/"
               },
               {
-                name  = "N8N_PUBLIC_API_ENDPOINT"
-                value = "http://${module.alb.alb_dns_name}/n8n/"
-              },
-              {
-                name  = "N8N_WEBHOOK_URL"
+                name  = "WEBHOOK_URL"
                 value = "http://${module.alb.alb_dns_name}/n8n/"
               }
             ]

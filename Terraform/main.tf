@@ -525,6 +525,10 @@ module "ecs_server2" {
               {
                 name  = "WEBHOOK_URL"
                 value = "http://${module.alb.alb_dns_name}/n8n/"
+              },
+              {
+                name  = "VUE_APP_URL_BASE_API"
+                value = "http://${module.alb.alb_dns_name}/n8n/"
               }
             ]
           )
@@ -542,6 +546,62 @@ module "ecs_server2" {
             }
           ]
           depends_on = []
+        },
+        {
+          # nginx reverse proxy to expose n8n under /n8n via ALB
+          name                 = "n8n-proxy"
+          image_repository_url = "docker.io/library/nginx"
+          image_tag            = "1.27-alpine"
+          cpu                  = 64
+          memory               = 128
+          essential            = true
+          port_mappings = [
+            {
+              container_port = 8080
+              host_port      = 0
+              protocol       = "tcp"
+              name           = "n8n-proxy"
+            }
+          ]
+          command = [
+            "sh",
+            "-c",
+            <<-EOT
+cat <<'EOF' > /etc/nginx/conf.d/default.conf
+server {
+    listen 8080;
+    server_name _;
+    client_max_body_size 50m;
+
+    location = /n8n {
+        return 301 /n8n/;
+    }
+
+    location /n8n/ {
+        proxy_pass http://127.0.0.1:5678/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $$host;
+        proxy_set_header X-Real-IP $$remote_addr;
+        proxy_set_header X-Forwarded-For $$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $$scheme;
+        proxy_set_header X-Forwarded-Host $$host;
+        proxy_set_header X-Forwarded-Prefix /n8n/;
+        proxy_set_header X-Forwarded-Uri $$request_uri;
+        proxy_set_header Upgrade $$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_redirect off;
+        proxy_buffering off;
+    }
+
+    location / {
+        return 404;
+    }
+}
+EOF
+nginx -g 'daemon off;'
+EOT
+          ]
+          depends_on = ["n8n"]
         },
         {
           # API Gateway - depends on Guest microservice and n8n
@@ -577,8 +637,8 @@ module "ecs_server2" {
         {
           # n8n HTTP exposure via ALB
           target_group_arn = module.alb.target_group_arns_map["n8n"]
-          container_name   = "n8n"
-          container_port   = var.services["n8n"].ecs_container_port_mappings[0].container_port
+          container_name   = "n8n-proxy"
+          container_port   = 8080
         }
       ]
     }

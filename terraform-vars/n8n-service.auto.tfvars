@@ -1,11 +1,11 @@
 services = {
   n8n = {
-    alb_target_group_port     = 5678
+    alb_target_group_port     = 8080
     alb_target_group_protocol = "HTTP"
     alb_target_group_type     = "ip"
     alb_health_check = {
       enabled             = true
-      path                = "/healthz"
+      path                = "/n8n/healthz"
       port                = "traffic-port"
       protocol            = "HTTP"
       matcher             = "200-399"

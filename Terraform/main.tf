@@ -512,30 +512,10 @@ module "ecs_server2" {
           memory               = var.services["n8n"].ecs_container_memory
           essential            = var.services["n8n"].ecs_container_essential
           port_mappings        = var.services["n8n"].ecs_container_port_mappings
-          environment_variables = concat(
-            [
-              for env_var in var.services["n8n"].ecs_environment_variables :
-              env_var
-            ],
-            [
-              {
-                name  = "N8N_EDITOR_BASE_URL"
-                value = "http://${module.alb.alb_dns_name}/n8n/"
-              },
-              {
-                name  = "N8N_WEBHOOK_URL"
-                value = "http://${module.alb.alb_dns_name}/n8n/"
-              },
-              {
-                name  = "N8N_PUBLIC_API_ENDPOINT"
-                value = "http://${module.alb.alb_dns_name}/n8n/"
-              },
-              {
-                name  = "N8N_DEPLOYMENT_SUBFOLDER"
-                value = "/n8n"
-              }
-            ]
-          )
+          environment_variables = [
+            for env_var in var.services["n8n"].ecs_environment_variables :
+            env_var
+          ]
           health_check = {
             command     = var.services["n8n"].ecs_container_health_check.command
             interval    = var.services["n8n"].ecs_container_health_check.interval

@@ -5,6 +5,7 @@
 regions:
   - global
   - us-east-1
+  - ap-southeast-1
 
 blocklist:
   # Keep a placeholder or real protected account(s) here if needed

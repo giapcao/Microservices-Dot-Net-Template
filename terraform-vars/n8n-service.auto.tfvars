@@ -19,15 +19,9 @@ services = {
       {
         path_pattern = {
           values = [
+            "/n8n*",
             "/n8n",
-            "/n8n/*",
-            "/rest",
-            "/rest/*",
-            "/socket.io/*",
-            "/webhook/*",
-            "/webhook-test/*",
-            "/static/*",
-            "/favicon.ico"
+            "/n8n/*"
           ]
         }
       }

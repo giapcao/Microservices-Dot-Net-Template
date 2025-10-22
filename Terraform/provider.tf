@@ -18,6 +18,6 @@ terraform {
 
 
 provider "aws" {
-  region = "us-east-1"
+  region = var.aws_region  # Use variable to allow switching regions
 
 }

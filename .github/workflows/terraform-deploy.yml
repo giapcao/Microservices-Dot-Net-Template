@@ -155,7 +155,8 @@ jobs:
             -backend-config="region=${AWS_REGION}" \
             -backend-config="dynamodb_table=${TABLE}" \
             -backend-config="encrypt=true" \
-            -input=false
+            -input=false \
+            -reconfigure
 
       - name: Validate Terraform
         working-directory: Terraform

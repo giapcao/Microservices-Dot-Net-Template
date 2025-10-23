@@ -33,7 +33,7 @@ services = {
     ecs_container_image_repository_url = "docker.n8n.io/n8nio/n8n"
     ecs_container_image_tag            = "latest"
     ecs_container_cpu                  = 256
-    ecs_container_memory               = 640
+    ecs_container_memory               = 512
     ecs_container_essential            = true
     ecs_container_port_mappings = [
       {
